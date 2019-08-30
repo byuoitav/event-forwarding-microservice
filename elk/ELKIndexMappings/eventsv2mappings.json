@@ -1,0 +1,143 @@
+{
+  "av-events": {
+    "order": 0,
+    "template": "av*",
+    "settings": {
+      "index": {
+        "number_of_shards": "1"
+      }
+    },
+    "mappings": {
+      "_default_": {
+        "_all": {
+          "enabled": true,
+          "norms": false
+        },
+        "dynamic_templates": [
+          {
+            "message_field": {
+              "match": "message",
+              "match_mapping_type": "string",
+              "mapping": {
+                "fielddata": {
+                  "format": "disabled"
+                },
+                "fields": {
+                  "raw": {
+                    "ignore_above": 256,
+                    "index": "not_analyzed",
+                    "type": "string",
+                    "doc_values": true
+                  }
+                },
+                "index": "analyzed",
+                "omit_norms": true,
+                "type": "string"
+              }
+            }
+          },
+          {
+            "string_fields": {
+              "match": "*",
+              "match_mapping_type": "string",
+              "mapping": {
+                "fielddata": {
+                  "format": "disabled"
+                },
+                "fields": {
+                  "raw": {
+                    "ignore_above": 256,
+                    "index": "not_analyzed",
+                    "type": "string",
+                    "doc_values": true
+                  }
+                },
+                "index": "analyzed",
+                "omit_norms": true,
+                "type": "string"
+              }
+            }
+          },
+          {
+            "double_fields": {
+              "match": "*",
+              "match_mapping_type": "double",
+              "mapping": {
+                "doc_values": true,
+                "type": "double"
+              }
+            }
+          },
+          {
+            "long_fields": {
+              "match": "*",
+              "match_mapping_type": "long",
+              "mapping": {
+                "doc_values": true,
+                "type": "long"
+              }
+            }
+          },
+          {
+            "date_fields": {
+              "match": "*",
+              "match_mapping_type": "date",
+              "mapping": {
+                "doc_values": true,
+                "type": "date"
+              }
+            }
+          }
+        ],
+        "properties": {
+            "generating-system": {
+                "type": "keyword"
+            },
+            "timestamp": {
+                "type": "date"
+            },
+            "event-tags": {
+                "type": "string", 
+                "index_name": "tag" 
+            },
+            "target-device": {
+                "properties": {
+                    "roomID": {
+                        "type": "keyword"
+                    },
+                    "buildingID": {
+                        "type": "keyword"
+                    },
+                    "deviceID": {
+                        "type": "keyword"
+                    }
+                }
+            },
+            "affected-room": {
+                "properties": {
+                    "roomID": {
+                        "type": "keyword"
+                    },
+                    "buildingID": {
+                        "type": "keyword"
+                    }
+                }
+            },
+            "key": {
+                "type": "keyword"
+            },
+            "value": {
+                "type": "keyword"
+            },
+            "user": {
+                "type": "keyword"
+            },
+            "data": {
+                "type": "text"
+            }
+        }
+    },
+    "aliases": {}
+  }
+}
+}
