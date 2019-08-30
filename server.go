@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/http"
 	"os"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/byuoitav/common"
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/v2/events"
+	"github.com/byuoitav/event-forwarding-microservice/helpers"
 )
 
 func main() {
@@ -16,6 +18,7 @@ func main() {
 	port := ":8333"
 	router := common.NewRouter()
 
+	go helpers.GetForwardManager().Start(context.TODO())
 	// connect to the hub
 	messenger, err := messenger.BuildMessenger(os.Getenv("HUB_ADDRESS"), base.Messenger, 5000)
 	if err != nil {
@@ -40,5 +43,5 @@ func main() {
 }
 
 func processEvent(event events.Event) {
-	forwarder.EventStream <- event
+	helpers.GetForwardManager().EventStream <- event
 }
