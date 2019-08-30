@@ -45,6 +45,7 @@ func InitializeCaches() {
 				}
 			}
 		default:
+			log.L.Infof("No storage type")
 		}
 		cache, err := makeCache(devs, rooms, i)
 		if err != nil {

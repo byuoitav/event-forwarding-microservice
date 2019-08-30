@@ -28,7 +28,7 @@ var (
 func GetForwardManager() *ForwardManager {
 	once.Do(func() {
 		fm = &ForwardManager{
-			Workers:     500,
+			Workers:     10,
 			EventStream: make(chan events.Event, 10000),
 			EventCache:  "default",
 		}
