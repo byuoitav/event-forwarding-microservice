@@ -21,8 +21,8 @@ var (
 
 func initialize() {
 	log.L.Info("Initializing couch requests")
-	username = os.Getenv("COUCH_USERNAME")
-	password = os.Getenv("COUCH_PASSWORD")
+	username = os.Getenv("DB_USERNAME")
+	password = os.Getenv("DB_PASSWORD")
 }
 
 //MakeRequest makes a generic Couch Request

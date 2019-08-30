@@ -39,9 +39,9 @@ func UpdateConfigFiles(ctx context.Context, db string) *nerr.E {
 		return nerr.Createf("", "%s: must pass a valid db name", errMsg)
 	}
 
-	addr := os.Getenv("COUCH_ADDRESS")
+	addr := os.Getenv("DB_ADDRESS")
 	if len(addr) == 0 {
-		return nerr.Createf("", "%s: COUCH_ADDRESS is not set", errMsg)
+		return nerr.Createf("", "%s: DB_ADDRESS is not set", errMsg)
 	}
 
 	url := fmt.Sprintf("%s/%s/_find", strings.Trim(addr, "/"), db)
@@ -65,8 +65,8 @@ func UpdateConfigFiles(ctx context.Context, db string) *nerr.E {
 	req.Header.Add("content-type", "application/json")
 
 	// add auth
-	uname := os.Getenv("COUCH_USERNAME")
-	pass := os.Getenv("COUCH_PASSWORD")
+	uname := os.Getenv("DB_USERNAME")
+	pass := os.Getenv("DB_PASSWORD")
 	if len(uname) > 0 && len(pass) > 0 {
 		req.SetBasicAuth(uname, pass)
 	}

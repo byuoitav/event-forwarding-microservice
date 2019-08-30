@@ -1,0 +1,16 @@
+{
+	"name": "event-forwarding-microservice",
+	"port": "8333",
+	"env-vars": [
+		"DB_ADDRESS",
+		"DB_PASSWORD",
+		"DB_USERNAME",
+		"ELK_DIRECT_ADDRESS",
+		"ELK_SA_PASSWORD",
+		"ELK_SA_USERNAME",
+		"HUB_ADDRESS",
+		"ROOM_SYSTEM",
+		"SERVICE_CONFIG_LOCATION",
+		"STOP_REPLICATION"
+	]
+}
