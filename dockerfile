@@ -8,5 +8,6 @@ COPY ${name}-bin ${name}-bin
 COPY version.txt version.txt
 
 # add any required files/folders here
+COPY service-config.json service-config.json
 
 ENTRYPOINT ./${name}-bin
