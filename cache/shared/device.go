@@ -32,6 +32,18 @@ func EditDeviceFromEvent(e sd.State, device sd.StaticDevice) (sd.StaticDevice, b
 			e.Time,
 			device,
 		)
+	} else if e.Key == "responsive" {
+		if e.Value == "ok" {
+			changes, device, err = SetDeviceField(
+				"last-health-success",
+				e.Time,
+				e.Time,
+				device,
+			)
+
+		} else {
+			return device, false, nil
+		}
 	} else {
 		changes, device, err = SetDeviceField(
 			e.Key,
