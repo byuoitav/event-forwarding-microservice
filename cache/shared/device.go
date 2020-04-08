@@ -25,25 +25,29 @@ func EditDeviceFromEvent(e sd.State, device sd.StaticDevice) (sd.StaticDevice, b
 		}
 	}
 
-	if HasTag(events.Heartbeat, e.Tags) {
-		changes, device, err = SetDeviceField(
-			"last-heartbeat",
-			e.Time,
-			e.Time,
-			device,
-		)
-	} else if e.Key == "responsive" {
-		if e.Value == "ok" {
+	if e.Key == "responsive" {
+		strVal, ok := e.Value.(string)
+		if ok && strings.EqualFold(strVal, "ok") {
 			changes, device, err = SetDeviceField(
 				"last-health-success",
 				e.Time,
 				e.Time,
 				device,
 			)
-
-		} else {
-			return device, false, nil
+			changes, device, err = SetDeviceField(
+				"last-heartbeat",
+				e.Time,
+				e.Time,
+				device,
+			)
 		}
+	} else if HasTag(events.Heartbeat, e.Tags) {
+		changes, device, err = SetDeviceField(
+			"last-heartbeat",
+			e.Time,
+			e.Time,
+			device,
+		)
 	} else {
 		changes, device, err = SetDeviceField(
 			e.Key,
