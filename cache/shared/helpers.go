@@ -65,11 +65,7 @@ func PushAllDevices(c Cache) {
 func updateHeartbeat(v events.Event, c Cache) {
 	split := strings.Split(v.GeneratingSystem, "-")
 	if len(split) < 3 {
-		if strings.Contains(strings.ToUpper(v.GeneratingSystem), "AWS") {
-			log.L.Debugf("AWS events ignored")
-			return
-		}
-		log.L.Debugf("invalid generating system", "invalid-arguments")
+		log.L.Debugf("invalid generating system: invalid-arguments")
 		return
 	}
 	heartbeatEvent := events.Event{
@@ -84,7 +80,7 @@ func updateHeartbeat(v events.Event, c Cache) {
 	}
 	_, err := ForwardAndStoreEvent(heartbeatEvent, c)
 	if err != nil {
-		log.L.Debugf("unable to create heartbeat event: %v", err)
+		log.L.Debugf("unable to create heartbeat event: %v", (*err).Error())
 	}
 }
 
