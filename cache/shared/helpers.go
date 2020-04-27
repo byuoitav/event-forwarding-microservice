@@ -62,14 +62,41 @@ func PushAllDevices(c Cache) {
 
 }
 
+func updateHeartbeat(v events.Event, c Cache) {
+	split := strings.Split(v.GeneratingSystem, "-")
+	if len(split) < 3 {
+		log.L.Debugf("invalid generating system: invalid-arguments")
+		return
+	}
+	heartbeatEvent := events.Event{
+		GeneratingSystem: "",
+		Timestamp:        v.Timestamp,
+		EventTags:        []string{events.Heartbeat},
+		TargetDevice:     events.GenerateBasicDeviceInfo(v.GeneratingSystem),
+		AffectedRoom:     events.GenerateBasicRoomInfo(fmt.Sprintf("%v-%v", split[0], split[1])),
+		Key:              "auto-heartbeat",
+		Value:            "ok",
+		Data:             "ok",
+	}
+	_, err := ForwardAndStoreEvent(heartbeatEvent, c)
+	if err != nil {
+		log.L.Debugf("unable to create heartbeat event: %v", err.Error())
+	}
+}
+
 //ForwardAndStoreEvent .
 func ForwardAndStoreEvent(v events.Event, c Cache) (bool, *nerr.E) {
-
-	//Forward All
-	list := forwarding.GetManagersForType(c.GetCacheName(), config.EVENT, config.ALL)
-	for i := range list {
-		//log.L.Debugf("Going to event forwarder: %v", list[i])
-		list[i].Send(v)
+	if len(v.GeneratingSystem) > 0 && !events.ContainsAnyTags(v, events.Heartbeat) {
+		// Try if we can
+		updateHeartbeat(v, c)
+	}
+	//Forward All if they are not "fake" heartbeats
+	if v.Key != "auto-heartbeat" {
+		list := forwarding.GetManagersForType(c.GetCacheName(), config.EVENT, config.ALL)
+		for i := range list {
+			//log.L.Debugf("Going to event forwarder: %v", list[i])
+			list[i].Send(v)
+		}
 	}
 
 	//if it's an doesn't correspond to core or detail state we don't want to store it.
@@ -90,7 +117,7 @@ func ForwardAndStoreEvent(v events.Event, c Cache) (bool, *nerr.E) {
 		return false, err.Addf("Couldn't store and forward device event")
 	}
 
-	list = forwarding.GetManagersForType(c.GetCacheName(), config.DEVICE, config.ALL)
+	list := forwarding.GetManagersForType(c.GetCacheName(), config.DEVICE, config.ALL)
 	for i := range list {
 		list[i].Send(newDev)
 	}

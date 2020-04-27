@@ -14,21 +14,21 @@ func TestSetDeviceField(t *testing.T) {
 	base := sd.StaticDevice{}
 
 	//string field tests
-	update, new, err := SetDeviceField("ID", "This is a test", time.Now(), base)
+	update, new, err := SetDeviceField("deviceID", "This is a test", time.Now(), base)
 	if err != nil {
 		t.Error(err.Error())
 		t.FailNow()
 	}
 	assert.Equal(t, new.DeviceID, "This is a test")
 
-	update, new, err = SetDeviceField("ID", "This is a test", time.Now(), new)
+	update, new, err = SetDeviceField("deviceID", "This is a test", time.Now(), new)
 	if err != nil {
 		t.Error(err.Error())
 		t.FailNow()
 	}
 	assert.Equal(t, false, update)
 
-	update, new, err = SetDeviceField("ID", "Shoudn't make it in.", time.Now().Add(-1*time.Hour), new)
+	update, new, err = SetDeviceField("deviceID", "Shoudn't make it in.", time.Now().Add(-1*time.Hour), new)
 	if err != nil {
 		t.Error(err.Error())
 		t.FailNow()
@@ -44,7 +44,7 @@ func TestSetDeviceField(t *testing.T) {
 	assert.Equal(t, true, update)
 	assert.Equal(t, new.Input, "abc")
 
-	//Note that if we pass in supported non-string primatives to a string field, the field will be filled with the string represntation of them
+	//Note that if we pass in supported non-string primatives to a string field, the field will be filled with the string representation of them
 	update, new, err = SetDeviceField("input", true, time.Now(), new)
 	if err != nil {
 		t.Error(err.Error())
@@ -194,6 +194,61 @@ func TestSetDeviceField(t *testing.T) {
 	assert.Equal(t, false, update)
 	assert.Equal(t, new.LastStateReceived.Format(time.RFC3339Nano), curtime.Format(time.RFC3339Nano))
 	assert.NotEqual(t, new.LastStateReceived.Format(time.RFC3339Nano), pretime.Format(time.RFC3339Nano))
+
+	// last-health-success
+
+	pretime = time.Now()
+	time.Sleep(5)
+	curtime = time.Now()
+	time.Sleep(5)
+	finaltime := time.Now()
+
+	eGood := sd.State{
+		ID:    "This is a test",
+		Key:   "responsive",
+		Time:  curtime,
+		Value: "ok",
+	}
+	eBad := sd.State{
+		ID:    "This is a test",
+		Key:   "responsive",
+		Time:  finaltime,
+		Value: "not-ok",
+	}
+	eLate := sd.State{
+		ID:    "This is a test",
+		Key:   "responsive",
+		Time:  pretime,
+		Value: "ok",
+	}
+	new, update, err = EditDeviceFromEvent(eGood, new)
+	if err != nil {
+		log.L.Warnf("%s", err.Stack)
+		t.Error(err.Error())
+		t.FailNow()
+	}
+	assert.Equal(t, true, update)
+	assert.Equal(t, new.LastHealthSuccess.Format(time.RFC3339Nano), curtime.Format(time.RFC3339Nano))
+
+	new, update, err = EditDeviceFromEvent(eBad, new)
+	if err != nil {
+		log.L.Warnf("%s", err.Stack)
+		t.Error(err.Error())
+		t.FailNow()
+	}
+	assert.Equal(t, false, update)
+	assert.Equal(t, new.LastHealthSuccess.Format(time.RFC3339Nano), curtime.Format(time.RFC3339Nano))
+	assert.NotEqual(t, new.LastHealthSuccess.Format(time.RFC3339Nano), finaltime.Format(time.RFC3339Nano))
+
+	new, update, err = EditDeviceFromEvent(eLate, new)
+	if err != nil {
+		log.L.Warnf("%s", err.Stack)
+		t.Error(err.Error())
+		t.FailNow()
+	}
+	assert.Equal(t, false, update)
+	assert.Equal(t, new.LastHealthSuccess.Format(time.RFC3339Nano), curtime.Format(time.RFC3339Nano))
+	assert.NotEqual(t, new.LastHealthSuccess.Format(time.RFC3339Nano), pretime.Format(time.RFC3339Nano))
 
 	//alert field tests
 
