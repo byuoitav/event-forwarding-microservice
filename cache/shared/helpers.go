@@ -80,7 +80,7 @@ func updateHeartbeat(v events.Event, c Cache) {
 	}
 	_, err := ForwardAndStoreEvent(heartbeatEvent, c)
 	if err != nil {
-		log.L.Debugf("unable to create heartbeat event: %v", (*err).Error())
+		log.L.Debugf("unable to create heartbeat event: %v", err.Error())
 	}
 }
 
