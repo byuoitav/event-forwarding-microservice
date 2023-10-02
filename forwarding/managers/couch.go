@@ -13,19 +13,19 @@ import (
 	"github.com/byuoitav/event-forwarding-microservice/couch"
 )
 
-//CouchStaticDevice is just an sd StaticDevice with an _id and a _rev
+// CouchStaticDevice is just an sd StaticDevice with an _id and a _rev
 type CouchStaticDevice struct {
 	sd.StaticDevice
 	Rev
 }
 
-//Rev is a utility struct used for updating revisions
+// Rev is a utility struct used for updating revisions
 type Rev struct {
 	Revision string `json:"_rev,omitempty"`
 	ID       string `json:"_id"`
 }
 
-//GetDefaultCouchDeviceBuffer starts and returns a buffer manager
+// GetDefaultCouchDeviceBuffer starts and returns a buffer manager
 func GetDefaultCouchDeviceBuffer(couchaddr, database string, interval time.Duration) *CouchDeviceBuffer {
 	//we'll need to initialize from the server
 	val := &CouchDeviceBuffer{
@@ -44,7 +44,7 @@ func GetDefaultCouchDeviceBuffer(couchaddr, database string, interval time.Durat
 	return val
 }
 
-//CouchDeviceBuffer takes a static device and buffers them for storage in couch
+// CouchDeviceBuffer takes a static device and buffers them for storage in couch
 type CouchDeviceBuffer struct {
 	incomingChannel    chan sd.StaticDevice
 	reingestionChannel chan CouchStaticDevice
@@ -58,7 +58,7 @@ type CouchDeviceBuffer struct {
 	couchaddr string
 }
 
-//Send fulfils the manager interface
+// Send fulfils the manager interface
 func (c *CouchDeviceBuffer) Send(toSend interface{}) error {
 
 	dev, ok := toSend.(sd.StaticDevice)
@@ -157,12 +157,12 @@ func (c *CouchDeviceBuffer) updateRevs(r []Rev) {
 	}
 }
 
-//CouchStaticUpdateBody is a utility to marshal the structure that couch bulk API expects
+// CouchStaticUpdateBody is a utility to marshal the structure that couch bulk API expects
 type CouchStaticUpdateBody struct {
 	Docs []CouchStaticDevice `json:"docs"`
 }
 
-//CouchBulkUpdateResponse is the couch reseponse to bulk update/create requests
+// CouchBulkUpdateResponse is the couch reseponse to bulk update/create requests
 type CouchBulkUpdateResponse struct {
 	OK       bool   `json:"ok,omitempty"`
 	ID       string `json:"id,omitempty"`
@@ -171,7 +171,7 @@ type CouchBulkUpdateResponse struct {
 	Reason   string `json:"reason,omitempty"`
 }
 
-//assume is run in go routine
+// assume is run in go routine
 func sendBulkDeviceUpdate(toSend map[string]CouchStaticDevice, returnChan chan<- []Rev, reingestionChannel chan<- CouchStaticDevice, addr, database string) {
 
 	if len(toSend) < 1 {
@@ -234,17 +234,17 @@ func sendBulkDeviceUpdate(toSend map[string]CouchStaticDevice, returnChan chan<-
 	returnChan <- toReturn
 }
 
-//CouchBulkRequestItem .
+// CouchBulkRequestItem .
 type CouchBulkRequestItem struct {
 	ID string `json:"id"`
 }
 
-//CouchBulkDocumentRequest .
+// CouchBulkDocumentRequest .
 type CouchBulkDocumentRequest struct {
 	Docs []CouchBulkRequestItem `json:"docs"`
 }
 
-//CouchBulkDevicesResponse .
+// CouchBulkDevicesResponse .
 type CouchBulkDevicesResponse struct {
 	Results []struct {
 		ID   string `json:"id"`

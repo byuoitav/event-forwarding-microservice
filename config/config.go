@@ -19,6 +19,7 @@ const (
 	Couch = "couch"
 	//Elk  .
 	Elk = "elk"
+	//TODO: Humio = "humio"
 )
 
 const (
@@ -29,7 +30,7 @@ const (
 	Device = "device"
 )
 
-//Config .
+// Config .
 type Config struct {
 	Forwarders []Forwarder `json:"forwarders"`
 	Caches     []Cache     `json:"caches"`
@@ -37,7 +38,7 @@ type Config struct {
 
 var config Config
 
-//GetConfig .
+// GetConfig .
 func GetConfig() Config {
 	once.Do(func() {
 		// parse configuration
@@ -63,7 +64,7 @@ func GetConfig() Config {
 	return config
 }
 
-//Contains .
+// Contains .
 func Contains(a []string, b string) bool {
 	for i := range a {
 		if a[i] == b {
@@ -74,7 +75,7 @@ func Contains(a []string, b string) bool {
 	return false
 }
 
-//ReplaceEnv .
+// ReplaceEnv .
 func ReplaceEnv(s string) string {
 
 	if strings.HasPrefix(s, "ENV") {

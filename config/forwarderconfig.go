@@ -24,6 +24,7 @@ const (
 	ELKTIMESERIES = "elktimeseries"
 	COUCH         = "couch"
 	WEBSOCKET     = "websocket"
+	//TODO: HUMIO         = "humio"
 
 	//Rotation Intervals
 
@@ -57,12 +58,13 @@ type Forwarder struct {
 	//legacy, default
 	CacheName string `json:"cache-name"`
 
-	Couch CouchForwader `json:"couch"`
-	Elk   ElkForwarder  `json:"elk"`
+	Couch CouchForwarder `json:"couch"`
+	Elk   ElkForwarder   `json:"elk"`
+	//TODO: Humio HumioForwarder `json:"humio"`
 }
 
 //CouchForwader .
-type CouchForwader struct {
+type CouchForwarder struct {
 	URL          string `json:"url"`
 	DatabaseName string `json:"database-name"`
 }
@@ -77,3 +79,5 @@ type ElkForwarder struct {
 	//daily, weekly, monthly, yearly
 	IndexRotationInterval string `json:"index-rotation-interval"`
 }
+
+//TODO: Add HumioForwarder struct here

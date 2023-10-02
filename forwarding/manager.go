@@ -10,13 +10,13 @@ import (
 	"github.com/byuoitav/event-forwarding-microservice/forwarding/managers"
 )
 
-//BufferManager is meant to handle buffering events/updates to the eventual forever home of the information
+// BufferManager is meant to handle buffering events/updates to the eventual forever home of the information
 type BufferManager interface {
 	Send(toSend interface{}) error
 }
 
-//Key is made up of the CacheName-DataType-EventType
-//e.g. default-device-all or legacy-event-all
+// Key is made up of the CacheName-DataType-EventType
+// e.g. default-device-all or legacy-event-all
 var managerMap map[string][]BufferManager
 var managerInit sync.Once
 
@@ -65,14 +65,20 @@ func initManagers() {
 		case config.WEBSOCKET:
 			log.L.Infof("Initializing Websocket manager %v", curName)
 			managerMap[curName] = append(managerMap[curName], managers.GetDefaultWebsocketForwarder())
-		}
 
+			//TODO: Add a case for Humio here
+			/*
+				case config.HUMIO:
+					log.L.Infof("Initializing Humio manager %v", curName)
+					managerMap[curName] = append(managerMap[curName], managers.GetDefaultHumioForwarder())
+			*/
+		}
 	}
 
 	log.L.Infof("Buffer managers initialized")
 }
 
-//GetManagersForType a
+// GetManagersForType a
 func GetManagersForType(cacheName, dataType, eventType string) []BufferManager {
 	managerInit.Do(initManagers)
 
@@ -85,7 +91,7 @@ func GetManagersForType(cacheName, dataType, eventType string) []BufferManager {
 	return v
 }
 
-//GetIndexFunction .
+// GetIndexFunction .
 func GetIndexFunction(indexPattern, rotationInterval string) func() string {
 	switch rotationInterval {
 
