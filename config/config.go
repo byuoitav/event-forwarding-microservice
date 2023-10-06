@@ -19,7 +19,8 @@ const (
 	Couch = "couch"
 	//Elk  .
 	Elk = "elk"
-	//TODO: Humio = "humio"
+	//Humio
+	Humio = "humio"
 )
 
 const (
