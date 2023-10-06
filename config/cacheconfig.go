@@ -13,6 +13,7 @@ type Cache struct {
 	CouchInfo CouchCache `json:"couch-cache"`
 	ELKinfo   ElkCache   `json:"elk-cache"`
 	RedisInfo RedisCache `json:"redis-cache"`
+	HumioInfo HumioCache `json:"humio-cache"`
 }
 
 //CouchCache .
@@ -26,6 +27,12 @@ type ElkCache struct {
 	DeviceIndex string `json:"device-index"`
 	RoomIndex   string `json:"room-index"`
 	URL         string `json:"url"`
+}
+
+//HumioCache
+type HumioCache struct {
+	DeviceIndex string `json:"device-index"`
+	RoomIndex   string `json:"room-index"`
 }
 
 //RedisCache .

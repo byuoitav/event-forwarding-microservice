@@ -66,15 +66,11 @@ func initManagers() {
 			log.L.Infof("Initializing Websocket manager %v", curName)
 			managerMap[curName] = append(managerMap[curName], managers.GetDefaultWebsocketForwarder())
 
-			//TODO: Add a case for Humio here
-			/*
-				case config.HUMIO:
-					log.L.Infof("Initializing Humio manager %v", curName)
-					managerMap[curName] = append(managerMap[curName], managers.GetDefaultHumioForwarder())
-			*/
+		case config.HUMIO:
+			log.L.Infof("Initializing Humio manager %v", curName)
+			managerMap[curName] = append(managerMap[curName], managers.GetDefaultHumioForwarder())
 		}
 	}
-
 	log.L.Infof("Buffer managers initialized")
 }
 

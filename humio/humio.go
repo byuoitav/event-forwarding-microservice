@@ -18,7 +18,7 @@ var (
 	authToken = os.Getenv("HUMIO_INGEST_TOKEN")
 )
 
-func MakeGenericHumioRequest(addr, method string, body interface{}, username, password string) ([]byte, *nerr.E) {
+func MakeGenericHumioRequest(addr, method string, body interface{}) ([]byte, *nerr.E) {
 	var reqBody []byte
 	var err error
 
@@ -84,5 +84,5 @@ func MakeHumioRequest(method, endpoint string, body interface{}) ([]byte, *nerr.
 
 	//format whole address
 	addr := fmt.Sprintf("%s%s", APIAddr, endpoint)
-	return MakeGenericHumioRequest(addr, method, body, "", "")
+	return MakeGenericHumioRequest(addr, method, body)
 }
