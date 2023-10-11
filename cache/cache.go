@@ -7,14 +7,14 @@ import (
 	"github.com/byuoitav/event-forwarding-microservice/cache/shared"
 )
 
-//Caches .
+// Caches .
 var Caches map[string]shared.Cache
 var cachesInit sync.Once
 
-//GetCache .
+// GetCache .
 func GetCache(cacheType string) shared.Cache {
 	cachesInit.Do(InitializeCaches)
-	log.L.Infof("Cache type: %s", cacheType)
+	log.L.Debugf("Cache type: %s", cacheType)
 	toReturn, ok := Caches[cacheType]
 	if !ok {
 		log.L.Warnf("Cache of type: %s does not exist", cacheType)

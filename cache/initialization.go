@@ -18,7 +18,7 @@ const maxSize = 10000
 
 const pushCron = "0 0 0 * * *"
 
-//InitializeCaches initializes the caches with data from ELK
+// InitializeCaches initializes the caches with data from ELK
 func InitializeCaches() {
 	log.L.Infof("Initializing Caches")
 	Caches = make(map[string]shared.Cache)
@@ -59,7 +59,7 @@ func InitializeCaches() {
 	log.L.Infof("Caches Initialized.")
 }
 
-//GetElkStaticDevices queries the provided index in ELK and unmarshals the records into a list of static devices
+// GetElkStaticDevices queries the provided index in ELK and unmarshals the records into a list of static devices
 func GetElkStaticDevices(index, url string) ([]statedefinition.StaticDevice, *nerr.E) {
 	log.L.Debugf("Getting device information from %v", index)
 	query := elk.GenericQuery{
@@ -91,7 +91,7 @@ func GetElkStaticDevices(index, url string) ([]statedefinition.StaticDevice, *ne
 	return toReturn, nil
 }
 
-//GetElkStaticRooms retrieves the list of static rooms from the privided elk index - assumes the ELK_DIRECT_ADDRESS env variable.
+// GetElkStaticRooms retrieves the list of static rooms from the privided elk index - assumes the ELK_DIRECT_ADDRESS env variable.
 func GetElkStaticRooms(index, url string) ([]statedefinition.StaticRoom, *nerr.E) {
 	query := elk.GenericQuery{
 		Size: maxSize,

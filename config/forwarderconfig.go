@@ -81,5 +81,6 @@ type ElkForwarder struct {
 }
 
 type HumioForwarder struct {
-	IndexRotationInterval string `json:"index-rotation-interval"`
+	Interval   int `json:"update-interval"`
+	BufferSize int `json:"buffer-size"`
 }

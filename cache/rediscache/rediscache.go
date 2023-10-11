@@ -16,7 +16,7 @@ import (
 	"github.com/go-redis/redis"
 )
 
-//RedisCache .
+// RedisCache .
 type RedisCache struct {
 	configuration config.Cache
 
@@ -37,7 +37,7 @@ func init() {
 	gob.Register(sd.StaticRoom{})
 }
 
-//MakeRedisCache .
+// MakeRedisCache .
 func MakeRedisCache(devices []sd.StaticDevice, rooms []sd.StaticRoom, pushCron string, configuration config.Cache) (shared.Cache, *nerr.E) {
 
 	//substitute the password if needed
@@ -100,7 +100,7 @@ func MakeRedisCache(devices []sd.StaticDevice, rooms []sd.StaticRoom, pushCron s
 	return toReturn, nil
 }
 
-//CheckAndStoreDevice .
+// CheckAndStoreDevice .
 func (rc *RedisCache) CheckAndStoreDevice(device sd.StaticDevice) (bool, sd.StaticDevice, *nerr.E) {
 	v := rc.getDeviceMu(device.DeviceID)
 	log.L.Debugf("Waiting for lock on device %v", device.DeviceID)
@@ -130,7 +130,7 @@ func (rc *RedisCache) CheckAndStoreDevice(device sd.StaticDevice) (bool, sd.Stat
 	return changes, merged, err
 }
 
-//CheckAndStoreRoom .
+// CheckAndStoreRoom .
 func (rc *RedisCache) CheckAndStoreRoom(room sd.StaticRoom) (bool, sd.StaticRoom, *nerr.E) {
 	v := rc.getRoomMu(room.RoomID)
 	v.Lock()
@@ -163,7 +163,7 @@ func (rc *RedisCache) CheckAndStoreRoom(room sd.StaticRoom) (bool, sd.StaticRoom
 
 }
 
-//GetDeviceRecord .
+// GetDeviceRecord .
 func (rc *RedisCache) GetDeviceRecord(deviceID string) (sd.StaticDevice, *nerr.E) {
 	//get and lock the device
 	v := rc.getDeviceMu(deviceID)
@@ -174,7 +174,7 @@ func (rc *RedisCache) GetDeviceRecord(deviceID string) (sd.StaticDevice, *nerr.E
 	return rc.getDevice(deviceID)
 }
 
-//GetRoomRecord .
+// GetRoomRecord .
 func (rc *RedisCache) GetRoomRecord(roomID string) (sd.StaticRoom, *nerr.E) {
 	//get and lock the room
 	v := rc.getRoomMu(roomID)
@@ -185,7 +185,7 @@ func (rc *RedisCache) GetRoomRecord(roomID string) (sd.StaticRoom, *nerr.E) {
 	return rc.getRoom(roomID)
 }
 
-//GetAllDeviceRecords .
+// GetAllDeviceRecords .
 func (rc *RedisCache) GetAllDeviceRecords() ([]sd.StaticDevice, *nerr.E) {
 
 	keys, er := rc.getAllDeviceKeys()
@@ -213,7 +213,7 @@ func (rc *RedisCache) GetAllDeviceRecords() ([]sd.StaticDevice, *nerr.E) {
 	return toReturn, nil
 }
 
-//GetAllRoomRecords .
+// GetAllRoomRecords .
 func (rc *RedisCache) GetAllRoomRecords() ([]sd.StaticRoom, *nerr.E) {
 	keys, er := rc.getAllRoomKeys()
 	if er != nil {
@@ -240,7 +240,7 @@ func (rc *RedisCache) GetAllRoomRecords() ([]sd.StaticRoom, *nerr.E) {
 	return toReturn, nil
 }
 
-//RemoveDevice .
+// RemoveDevice .
 func (rc *RedisCache) RemoveDevice(id string) *nerr.E {
 	v := rc.getDeviceMu(id)
 	v.Lock()
@@ -249,7 +249,7 @@ func (rc *RedisCache) RemoveDevice(id string) *nerr.E {
 	return nerr.Translate(rc.devclient.Del(id).Err()).Addf("Couldn't remove device %v", id)
 }
 
-//RemoveRoom .
+// RemoveRoom .
 func (rc *RedisCache) RemoveRoom(id string) *nerr.E {
 
 	v := rc.getRoomMu(id)
@@ -259,7 +259,7 @@ func (rc *RedisCache) RemoveRoom(id string) *nerr.E {
 	return nerr.Translate(rc.roomclient.Del(id).Err()).Addf("Couldn't remove room %v", id)
 }
 
-//NukeRoom .
+// NukeRoom .
 func (rc *RedisCache) NukeRoom(id string) ([]string, *nerr.E) {
 	keys, err := rc.devclient.Keys(fmt.Sprintf("%s*", id)).Result()
 	if err != nil {
@@ -281,7 +281,7 @@ func (rc *RedisCache) NukeRoom(id string) ([]string, *nerr.E) {
 	return keys, nil
 }
 
-//StoreDeviceEvent .
+// StoreDeviceEvent .
 func (rc *RedisCache) StoreDeviceEvent(toSave sd.State) (bool, sd.StaticDevice, *nerr.E) {
 	if len(toSave.ID) < 1 {
 		return false, sd.StaticDevice{}, nerr.Create("State must include device ID", "invaid-parameter")
@@ -308,17 +308,17 @@ func (rc *RedisCache) StoreDeviceEvent(toSave sd.State) (bool, sd.StaticDevice, 
 	return changes, merged, err
 }
 
-//StoreAndForwardEvent .
+// StoreAndForwardEvent .
 func (rc *RedisCache) StoreAndForwardEvent(event events.Event) (bool, *nerr.E) {
 	return shared.ForwardAndStoreEvent(event, rc)
 }
 
-//GetCacheType .
+// GetCacheType .
 func (rc *RedisCache) GetCacheType() string {
 	return "redis"
 }
 
-//GetCacheName .
+// GetCacheName .
 func (rc *RedisCache) GetCacheName() string {
 	return rc.configuration.Name
 }

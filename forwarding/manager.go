@@ -68,7 +68,10 @@ func initManagers() {
 
 		case config.HUMIO:
 			log.L.Infof("Initializing Humio manager %v", curName)
-			managerMap[curName] = append(managerMap[curName], managers.GetDefaultHumioForwarder())
+			managerMap[curName] = append(managerMap[curName], managers.GetDefaultHumioForwarder(
+				time.Duration(i.Humio.Interval)*time.Second,
+				i.Humio.BufferSize,
+			))
 		}
 	}
 	log.L.Infof("Buffer managers initialized")

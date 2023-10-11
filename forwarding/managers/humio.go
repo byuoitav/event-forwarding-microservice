@@ -14,13 +14,15 @@ import (
 type HumioForwarder struct {
 	incomingChannel chan events.Event
 	interval        time.Duration
+	bufferSize      int
 	eventsBuffer    []events.Event
 }
 
-func GetDefaultHumioForwarder() *HumioForwarder {
-	log.L.Infof("Getting default Humio forwarder")
+func GetDefaultHumioForwarder(interval time.Duration, bufferSize int) *HumioForwarder {
+	log.L.Infof("Getting default Humio forwarder with bufferSize %d and interval %s", bufferSize, interval.String())
 	forwarder := &HumioForwarder{
-		interval:        5 * time.Second,
+		interval:        interval,
+		bufferSize:      bufferSize,
 		incomingChannel: make(chan events.Event, 10000),
 		eventsBuffer:    []events.Event{},
 	}
@@ -30,7 +32,6 @@ func GetDefaultHumioForwarder() *HumioForwarder {
 
 // Send
 func (e *HumioForwarder) Send(toSend interface{}) error {
-	log.L.Debugf("Sending event to Humio")
 	var event events.Event
 
 	switch e := toSend.(type) {
@@ -53,13 +54,14 @@ func (e *HumioForwarder) Start() {
 	for {
 		select {
 		case <-ticker.C:
-			log.L.Debugf("Here We ARE")
-
-			log.L.Debugf("Sending events to Humio")
-			e.sendBuffer()
-			e.flushBuffer()
+			if (len(e.eventsBuffer)) != 0 {
+				log.L.Debugf("Sending events to Humio")
+				e.sendBuffer()
+				e.flushBuffer()
+			}
 
 		case event := <-e.incomingChannel:
+			log.L.Debugf("Receiving Event for Humio")
 			e.bufferevent(event)
 		}
 	}
@@ -67,23 +69,23 @@ func (e *HumioForwarder) Start() {
 
 // Buffer Events
 func (e *HumioForwarder) bufferevent(event events.Event) {
-	log.L.Infof("Buffering event from %s for Humio\n", event.GeneratingSystem)
+	log.L.Debugf("Buffering event from %s for Humio\n", event.GeneratingSystem)
 	e.eventsBuffer = append(e.eventsBuffer, event)
 	//insure the buffer doesn't get too big
-	if len(e.eventsBuffer) > 4000 {
-		log.L.Debugf("Humio Buffer surpassing 4000 events")
+	if len(e.eventsBuffer) > e.bufferSize-1 {
+		log.L.Debugf("Humio Buffer surpassing %d events", e.bufferSize)
 		e.sendBuffer()
 		e.flushBuffer()
 	}
 }
 
 func (e *HumioForwarder) flushBuffer() {
-	log.L.Debugf("Flushing buffer for Humio")
+	log.L.Debugf("Flushing buffer of %d events for Humio", len(e.eventsBuffer))
 	e.eventsBuffer = []events.Event{}
 }
 
 func (e *HumioForwarder) marshalBuffer() []byte {
-	log.L.Debugf("Marshalling buffer for Humio")
+	log.L.Debugf("Marshaling buffer for Humio")
 	logs, err := json.Marshal(e.eventsBuffer)
 	if err != nil {
 		log.L.Debugf("Failed to marshal buffer for Humio: %s", err.Error())
@@ -93,7 +95,7 @@ func (e *HumioForwarder) marshalBuffer() []byte {
 }
 
 func (e *HumioForwarder) sendBuffer() error {
-	log.L.Debugf("Sending buffer for Humio")
+	log.L.Infof("Sending buffer for Humio of %d events", len(e.eventsBuffer))
 	if len(e.eventsBuffer) > 0 {
 		_, err := humio.MakeHumioRequest(http.MethodPost, "/api/v1/ingest/json", e.marshalBuffer())
 		if err != nil {
