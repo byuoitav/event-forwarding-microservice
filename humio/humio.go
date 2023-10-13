@@ -14,11 +14,10 @@ import (
 )
 
 var (
-	APIAddr   = os.Getenv("HUMIO_DIRECT_ADDRESS")
-	authToken = os.Getenv("HUMIO_INGEST_TOKEN")
+	APIAddr = os.Getenv("HUMIO_DIRECT_ADDRESS")
 )
 
-func MakeGenericHumioRequest(addr, method string, body interface{}) ([]byte, *nerr.E) {
+func MakeGenericHumioRequest(addr, method string, body interface{}, authToken string) ([]byte, *nerr.E) {
 	var reqBody []byte
 	var err error
 
@@ -73,16 +72,12 @@ func MakeGenericHumioRequest(addr, method string, body interface{}) ([]byte, *ne
 	return respBody, nil
 }
 
-func MakeHumioRequest(method, endpoint string, body interface{}) ([]byte, *nerr.E) {
+func MakeHumioRequest(method, endpoint string, body interface{}, authToken string) ([]byte, *nerr.E) {
 	if len(APIAddr) == 0 {
 		log.L.Fatalf("HUMIO_DIRECT_ADDRESS is not set.")
 	}
 
-	if len(authToken) == 0 {
-		log.L.Fatalf("HUMIO_INGEST_TOKEN is not set.")
-	}
-
 	//format whole address
 	addr := fmt.Sprintf("%s%s", APIAddr, endpoint)
-	return MakeGenericHumioRequest(addr, method, body)
+	return MakeGenericHumioRequest(addr, method, body, authToken)
 }

@@ -71,6 +71,7 @@ func initManagers() {
 			managerMap[curName] = append(managerMap[curName], managers.GetDefaultHumioForwarder(
 				time.Duration(i.Humio.Interval)*time.Second,
 				i.Humio.BufferSize,
+				i.Humio.IngestToken,
 			))
 		}
 	}

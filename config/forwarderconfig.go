@@ -81,6 +81,7 @@ type ElkForwarder struct {
 }
 
 type HumioForwarder struct {
-	Interval   int `json:"update-interval"`
-	BufferSize int `json:"buffer-size"`
+	Interval    int    `json:"update-interval"`
+	BufferSize  int    `json:"buffer-size"`
+	IngestToken string `json:"ingest-token"`
 }

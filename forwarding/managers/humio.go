@@ -16,15 +16,17 @@ type HumioForwarder struct {
 	interval        time.Duration
 	bufferSize      int
 	eventsBuffer    []events.Event
+	ingestToken     string
 }
 
-func GetDefaultHumioForwarder(interval time.Duration, bufferSize int) *HumioForwarder {
+func GetDefaultHumioForwarder(interval time.Duration, bufferSize int, ingestToken string) *HumioForwarder {
 	log.L.Infof("Getting default Humio forwarder with bufferSize %d and interval %s", bufferSize, interval.String())
 	forwarder := &HumioForwarder{
 		interval:        interval,
 		bufferSize:      bufferSize,
 		incomingChannel: make(chan events.Event, 10000),
 		eventsBuffer:    []events.Event{},
+		ingestToken:     ingestToken,
 	}
 	go forwarder.Start()
 	return forwarder
@@ -97,7 +99,7 @@ func (e *HumioForwarder) marshalBuffer() []byte {
 func (e *HumioForwarder) sendBuffer() error {
 	log.L.Infof("Sending buffer for Humio of %d events", len(e.eventsBuffer))
 	if len(e.eventsBuffer) > 0 {
-		_, err := humio.MakeHumioRequest(http.MethodPost, "/api/v1/ingest/json", e.marshalBuffer())
+		_, err := humio.MakeHumioRequest(http.MethodPost, "/api/v1/ingest/json", e.marshalBuffer(), e.ingestToken)
 		if err != nil {
 			log.L.Debugf("Failed to send buffer for Humio: %s", err.Error())
 			return err
