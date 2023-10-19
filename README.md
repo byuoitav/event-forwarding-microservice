@@ -8,7 +8,6 @@ The event-forwarding-microservice receives events from the central event hub and
         "caches": [
                 {
                         "name": "default",
-                        "storage-type": "elk",
                         "cache-type": "redis",
                         "type-cache": {
                                 "device-index": "oit-static-av-devices-v3",
