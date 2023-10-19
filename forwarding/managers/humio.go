@@ -15,7 +15,7 @@ type HumioForwarder struct {
 	incomingChannel chan events.Event
 	interval        time.Duration
 	bufferSize      int
-	eventsBuffer    []events.Event
+	eventsBuffer    []HumioEvent
 	ingestToken     string
 }
 
@@ -25,7 +25,7 @@ func GetDefaultHumioForwarder(interval time.Duration, bufferSize int, ingestToke
 		interval:        interval,
 		bufferSize:      bufferSize,
 		incomingChannel: make(chan events.Event, 10000),
-		eventsBuffer:    []events.Event{},
+		eventsBuffer:    []HumioEvent{},
 		ingestToken:     ingestToken,
 	}
 	go forwarder.Start()
@@ -72,7 +72,9 @@ func (e *HumioForwarder) Start() {
 // Buffer Events
 func (e *HumioForwarder) bufferevent(event events.Event) {
 	log.L.Debugf("Buffering event from %s for Humio\n", event.GeneratingSystem)
-	e.eventsBuffer = append(e.eventsBuffer, event)
+	//convert events.Event to HumioEvent
+	alias := convertEvent(event)
+	e.eventsBuffer = append(e.eventsBuffer, alias)
 	//insure the buffer doesn't get too big
 	if len(e.eventsBuffer) > e.bufferSize-1 {
 		log.L.Debugf("Humio Buffer surpassing %d events", e.bufferSize)
@@ -83,7 +85,7 @@ func (e *HumioForwarder) bufferevent(event events.Event) {
 
 func (e *HumioForwarder) flushBuffer() {
 	log.L.Debugf("Flushing buffer of %d events for Humio", len(e.eventsBuffer))
-	e.eventsBuffer = []events.Event{}
+	e.eventsBuffer = []HumioEvent{}
 }
 
 func (e *HumioForwarder) marshalBuffer() []byte {
@@ -106,4 +108,79 @@ func (e *HumioForwarder) sendBuffer() error {
 		}
 	}
 	return nil
+}
+
+
+// convert events.Event to HumioEvent
+func convertEvent(event events.Event) HumioEvent {
+	//convert timestamp to unix time
+	unixTime := event.Timestamp.Unix() * 1000
+	//create and return humio event using new time
+	alias := HumioEvent{
+		GeneratingSystem: event.GeneratingSystem,
+		EventTags:        event.EventTags,
+		TargetDevice: BasicDeviceInfo{
+			BasicRoomInfo: BasicRoomInfo{
+				BuildingID: event.TargetDevice.BuildingID,
+				RoomID:     event.TargetDevice.RoomID,
+			},
+			DeviceID: event.TargetDevice.DeviceID,
+		},
+		AffectedRoom: BasicRoomInfo{
+			BuildingID: event.AffectedRoom.BuildingID,
+			RoomID:     event.AffectedRoom.RoomID,
+		},
+		Key:       event.Key,
+		Value:     event.Value,
+		User:      event.User,
+		Data:      event.Data,
+		Timestamp: unixTime,
+		Timezone:  event.Timestamp.Format("MDT"),
+	}
+	return alias
+}
+
+// Edits the field names to match the Humio schema
+type HumioEvent struct {
+	// GeneratingSystem is the system actually generating the event. i.e. For an API call against a raspberry pi this would be the hostname of the raspberry pi running the AV-API. If the call is against AWS, this would be 'AWS'
+	GeneratingSystem string `json:"generating-system"`
+
+	// EventTags is a collection of strings to give more information about what kind of event this is, used in routing and processing events. See the EventTags const delcaration for some common tags.
+	EventTags []string `json:"event-tags"`
+
+	// TargetDevice is the device being affected by the event. e.g. a power on event, this would be the device powering on
+	TargetDevice BasicDeviceInfo `json:"target-device"`
+
+	// AffectedRoom is the room being affected by the event. e.g. in events arising from an API call this is the room called in the API
+	AffectedRoom BasicRoomInfo `json:"affected-room"`
+
+	// Key of the event
+	Key string `json:"key"`
+
+	// Value of the event
+	Value string `json:"value"`
+
+	// User is the user associated with generating the event
+	User string `json:"user"`
+
+	// Data is an optional field to dump data that you wont necessarily want to aggregate on, but you may want to search on
+	Data interface{} `json:"data,omitempty"`
+
+	// Timestamp is the time the event took place
+	Timestamp int64 `json:"@timestamp"`
+
+	// Timezone
+	Timezone string `json:"@timezone"`
+}
+
+// BasicRoomInfo contains device information that is easy to aggregate on.
+type BasicRoomInfo struct {
+	BuildingID string `json:"buildingID,omitempty"`
+	RoomID     string `json:"roomID,omitempty"`
+}
+
+// BasicDeviceInfo contains device information that is easy to aggregate on.
+type BasicDeviceInfo struct {
+	BasicRoomInfo
+	DeviceID string `json:"deviceID,omitempty"`
 }
