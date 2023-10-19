@@ -4,9 +4,6 @@ package config
 type Cache struct {
 	Name string `json:"name"`
 
-	//Persistence type
-	StorageType string `json:"storage-type"`
-
 	//Legacy or Default
 	CacheType string `json:"cache-type"`
 

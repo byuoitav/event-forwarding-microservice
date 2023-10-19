@@ -11,7 +11,7 @@ import (
 	"github.com/byuoitav/common/v2/events"
 )
 
-//EditDeviceFromEvent .
+// EditDeviceFromEvent .
 func EditDeviceFromEvent(e sd.State, device sd.StaticDevice) (sd.StaticDevice, bool, *nerr.E) {
 	var changes bool
 	var err *nerr.E

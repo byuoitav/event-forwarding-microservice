@@ -38,7 +38,7 @@ func init() {
 }
 
 // MakeRedisCache .
-func MakeRedisCache(devices []sd.StaticDevice, rooms []sd.StaticRoom, pushCron string, configuration config.Cache) (shared.Cache, *nerr.E) {
+func MakeRedisCache(pushCron string, configuration config.Cache) (shared.Cache, *nerr.E) {
 
 	//substitute the password if needed
 	pass := config.ReplaceEnv(configuration.RedisInfo.Password)
@@ -81,21 +81,6 @@ func MakeRedisCache(devices []sd.StaticDevice, rooms []sd.StaticRoom, pushCron s
 	if err != nil {
 		return toReturn, nerr.Translate(err).Addf("Couldn't communicate with redis server at %v", addr)
 	}
-
-	log.L.Infof("Persistent storage has %v records.", len(devices))
-
-	for _, d := range devices {
-		//update or add the device
-		_, _, er := toReturn.CheckAndStoreDevice(d)
-		if er != nil {
-			log.L.Errorf("Problem syncing device %v with the persistent enginge")
-		}
-
-	}
-
-	//if there's anything left in keymap we're gonna push everything up
-	shared.PushAllDevices(toReturn)
-	log.L.Infof("Cache initialized with %v records", len(devices))
 
 	return toReturn, nil
 }

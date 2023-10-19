@@ -426,6 +426,7 @@ var translationMap = map[string]string{
 	"TECLITE": "tec-lite",
 	"CUSTOM":  "custom",
 	"SD":      "tec-sd",
+	"DEV":     "development-flag", //fake device type for testing purposes
 }
 
 // GetDeviceTypeByID .
@@ -448,6 +449,6 @@ func GetDeviceTypeByID(id string) string {
 		}
 	}
 
-	log.L.Warnf("no valid translation for :%v", split[2])
+	log.L.Warnf("no valid translation for: %v", split[2])
 	return ""
 }
