@@ -36,3 +36,29 @@ The event-forwarding-microservice receives events from the central event hub and
         ]
 } 
 ```
+## Forwarder Options
+### Humio
+```
+"humio": {
+        "update-interval": 5, //send buffer every x seconds
+        "buffer-size": 4000, //max amount of events that can be stored in a buffer
+        "ingest-token": "jai52gwjl-auemdio5-5263-83lp-sjrd3853k9"
+}
+```
+### Elk
+```
+"elk": {
+        "url": "http://location.byu.edu:1534",
+        "index-pattern": "av-delta-events", 
+        "index-rotation-interval": "monthly"
+}
+```
+## Cache Options
+### redis-cache
+```
+"redis-cache": {
+                                "device-database": 0,
+                                "room-database": 1,
+                                "url": "production.location.com:PORT"
+                        }
+```
