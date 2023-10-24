@@ -8,7 +8,6 @@ require (
 	github.com/byuoitav/central-event-system v0.0.1
 	github.com/byuoitav/common v0.0.0-20230217215806-8472d0ddbfb3
 	github.com/byuoitav/shipwright v0.0.0-20201020215637-d221b79696ff
-	github.com/fatih/color v1.15.0
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/robfig/cron v1.2.0
 	github.com/stretchr/testify v1.8.4
@@ -17,6 +16,7 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
+	github.com/fatih/color v1.15.0 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/labstack/echo v3.3.10+incompatible // indirect
 	github.com/labstack/gommon v0.4.0 // indirect

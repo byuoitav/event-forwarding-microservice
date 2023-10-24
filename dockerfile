@@ -1,13 +1,11 @@
-FROM byuoitav/amd64-alpine
-MAINTAINER Daniel Randall <danny_randall@byu.edu>
+FROM gcr.io/distroless/static
 
 ARG NAME
-ENV name=${NAME}
 
+COPY ${NAME} /app
 COPY ${name}-bin ${name}-bin 
-COPY version.txt version.txt
 
-# add any required files/folders here
 COPY service-config.json service-config.json
 
-ENTRYPOINT ./${name}-bin
+ENTRYPOINT ["/app"]
+
