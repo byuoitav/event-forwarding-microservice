@@ -11,6 +11,7 @@ import (
 	"github.com/byuoitav/event-forwarding-microservice/humio"
 )
 
+// HumioForwarder is a forwarder that sends events to Humio
 type HumioForwarder struct {
 	incomingChannel chan events.Event
 	interval        time.Duration
@@ -19,6 +20,7 @@ type HumioForwarder struct {
 	ingestToken     string
 }
 
+// returns a forwarder that sends events to Humio
 func GetDefaultHumioForwarder(interval time.Duration, bufferSize int, ingestToken string) *HumioForwarder {
 	log.L.Infof("Getting default Humio forwarder with bufferSize %d and interval %s", bufferSize, interval.String())
 	forwarder := &HumioForwarder{
@@ -32,7 +34,7 @@ func GetDefaultHumioForwarder(interval time.Duration, bufferSize int, ingestToke
 	return forwarder
 }
 
-// Send
+// Sends events to the Humio Forwarder's incoming channel
 func (e *HumioForwarder) Send(toSend interface{}) error {
 	var event events.Event
 
@@ -48,7 +50,7 @@ func (e *HumioForwarder) Send(toSend interface{}) error {
 	return nil
 }
 
-// Start
+// Starts the event forwarder specific to Humio
 func (e *HumioForwarder) Start() {
 	log.L.Infof("Starting event forwarder for Humio")
 	ticker := time.NewTicker(e.interval)
@@ -69,7 +71,7 @@ func (e *HumioForwarder) Start() {
 	}
 }
 
-// Buffer Events
+// Adds events to the buffer
 func (e *HumioForwarder) bufferevent(event events.Event) {
 	log.L.Debugf("Buffering event from %s for Humio\n", event.GeneratingSystem)
 	//convert events.Event to HumioEvent
@@ -83,11 +85,13 @@ func (e *HumioForwarder) bufferevent(event events.Event) {
 	}
 }
 
+// clears the buffer of all events
 func (e *HumioForwarder) flushBuffer() {
 	log.L.Debugf("Flushing buffer of %d events for Humio", len(e.eventsBuffer))
 	e.eventsBuffer = []HumioEvent{}
 }
 
+// marshals the buffer to json
 func (e *HumioForwarder) marshalBuffer() []byte {
 	log.L.Debugf("Marshaling buffer for Humio")
 	logs, err := json.Marshal(e.eventsBuffer)
@@ -98,6 +102,7 @@ func (e *HumioForwarder) marshalBuffer() []byte {
 	return logs
 }
 
+// send the buffer to humio
 func (e *HumioForwarder) sendBuffer() error {
 	log.L.Infof("Sending buffer for Humio of %d events", len(e.eventsBuffer))
 	if len(e.eventsBuffer) > 0 {
@@ -109,7 +114,6 @@ func (e *HumioForwarder) sendBuffer() error {
 	}
 	return nil
 }
-
 
 // convert events.Event to HumioEvent
 func convertEvent(event events.Event) HumioEvent {

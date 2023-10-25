@@ -1,3 +1,4 @@
+// forwarding sets up the individual forwarders for each specified forwarder in the config
 package forwarding
 
 import (

@@ -92,7 +92,6 @@ function Build {
     # }
 }
 
-
 function Cleanup {
     Write-Output "Clean"
     Invoke-Expression "go clean"

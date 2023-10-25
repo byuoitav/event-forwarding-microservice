@@ -1,3 +1,4 @@
+// The Humio package is for making final http requests to Humio
 package humio
 
 import (
@@ -17,6 +18,7 @@ var (
 	APIAddr = os.Getenv("HUMIO_DIRECT_ADDRESS")
 )
 
+// sends a http request to humio using the given method, body, and authToken
 func MakeGenericHumioRequest(addr, method string, body interface{}, authToken string) ([]byte, *nerr.E) {
 	var reqBody []byte
 	var err error
@@ -72,6 +74,7 @@ func MakeGenericHumioRequest(addr, method string, body interface{}, authToken st
 	return respBody, nil
 }
 
+// MakeHumioRequest sends an http request to humio using a direct address stored in the environment
 func MakeHumioRequest(method, endpoint string, body interface{}, authToken string) ([]byte, *nerr.E) {
 	if len(APIAddr) == 0 {
 		log.L.Fatalf("HUMIO_DIRECT_ADDRESS is not set.")
