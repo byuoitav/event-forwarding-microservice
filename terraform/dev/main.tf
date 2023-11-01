@@ -50,7 +50,7 @@ data "aws_ssm_parameter" "aws_access_key" {
 }
 
 data "aws_ssm_parameter" "aws_secret_key" {
-  name = "/env/event-forwarder-dev/aws-secret-key
+  name = "/env/event-forwarder-dev/aws-secret-key"
 }
 
 module "event_forwarder" {
