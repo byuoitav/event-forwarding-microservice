@@ -53,6 +53,10 @@ data "aws_ssm_parameter" "aws_secret_key" {
   name = "/env/event-forwarder-dev/aws-secret-key"
 }
 
+data "aws_ssm_parameter" "humio_direct_address" {
+  name = "/env/event-forwarder-dev/humio-direct-address"
+}
+
 module "event_forwarder" {
   //source = "github.com/byuoitav/terraform//modules/kubernetes-deployment"
   source = "github.com/byuoitav/terraform-pod-deployment//modules/kubernetes-deployment"
@@ -79,6 +83,7 @@ module "event_forwarder" {
     "ELK_SA_PASSWORD"    = data.aws_ssm_parameter.elk_password.value,
     "AWS_SECRET_KEY"     = data.aws_ssm_parameter.aws_secret_key,
     "AWS_ACCESS_KEY"     = data.aws_ssm_parameter.aws_access_key,
+    "HUMIO_DIRECT_ADDRESS" = data.aws_ssm_parameter.humio_direct_address,
   }
   container_args = []
   health_check   = false
