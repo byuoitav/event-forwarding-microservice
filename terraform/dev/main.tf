@@ -21,7 +21,6 @@ provider "kubernetes" {
   host = data.aws_ssm_parameter.eks_cluster_endpoint.value
   config_path = "~/.kube/config"
 }
-
 data "aws_ssm_parameter" "prd_db_addr" {
   name = "/env/couch-address"
 }
@@ -46,6 +45,14 @@ data "aws_ssm_parameter" "elk_password" {
   name = "/env/event-forwarder-dev/elk-password"
 }
 
+data "aws_ssm_parameter" "aws_access_key" {
+  name = "/env/event-forwarder-dev/aws-access-key"
+}
+
+data "aws_ssm_parameter" "aws_secret_key" {
+  name = "/env/event-forwarder-dev/aws-secret-key
+}
+
 module "event_forwarder" {
   //source = "github.com/byuoitav/terraform//modules/kubernetes-deployment"
   source = "github.com/byuoitav/terraform-pod-deployment//modules/kubernetes-deployment"
@@ -53,7 +60,7 @@ module "event_forwarder" {
   // required
   name           = "event-forwarder-dev"
   image          = "ghcr.io/byuoitav/event-forwarding-microservice/event-forwarding-microservice-amd64-dev"
-  image_version  = "8d8705c"
+  image_version  = "6c47825"
   container_port = 8333
   repo_url       = "https://github.com/byuoitav/event-forwarding-microservice"
   cluster        = "av-dev"
@@ -70,6 +77,8 @@ module "event_forwarder" {
     "ELK_DIRECT_ADDRESS" = data.aws_ssm_parameter.elk_direct_address.value,
     "ELK_SA_USERNAME"    = data.aws_ssm_parameter.elk_username.value,
     "ELK_SA_PASSWORD"    = data.aws_ssm_parameter.elk_password.value,
+    "AWS_SECRET_KEY"     = data.aws_ssm_parameter.aws_secret_key,
+    "AWS_ACCESS_KEY"     = data.aws_ssm_parameter.aws_access_key,
   }
   container_args = []
   health_check   = false
