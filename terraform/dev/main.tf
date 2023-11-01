@@ -73,17 +73,17 @@ module "event_forwarder" {
 
   // optional
   container_env = {
-    "DB_ADDRESS"         = "https://${data.aws_ssm_parameter.prd_db_addr.value}",
-    "DB_USERNAME"        = data.aws_ssm_parameter.prd_db_username.value,
-    "DB_PASSWORD"        = data.aws_ssm_parameter.prd_db_password.value,
-    "HUB_ADDRESS"        = "ws://event-hub-dev"
-    "STOP_REPLICATION"   = "true"
-    "ELK_DIRECT_ADDRESS" = data.aws_ssm_parameter.elk_direct_address.value,
-    "ELK_SA_USERNAME"    = data.aws_ssm_parameter.elk_username.value,
-    "ELK_SA_PASSWORD"    = data.aws_ssm_parameter.elk_password.value,
-    "AWS_SECRET_KEY"     = data.aws_ssm_parameter.aws_secret_key,
-    "AWS_ACCESS_KEY"     = data.aws_ssm_parameter.aws_access_key,
-    "HUMIO_DIRECT_ADDRESS" = data.aws_ssm_parameter.humio_direct_address,
+    "DB_ADDRESS"           = "https://${data.aws_ssm_parameter.prd_db_addr.value}",
+    "DB_USERNAME"          = data.aws_ssm_parameter.prd_db_username.value,
+    "DB_PASSWORD"          = data.aws_ssm_parameter.prd_db_password.value,
+    "HUB_ADDRESS"          = "ws://event-hub-dev"
+    "STOP_REPLICATION"     = "true"
+    "ELK_DIRECT_ADDRESS"   = data.aws_ssm_parameter.elk_direct_address.value,
+    "ELK_SA_USERNAME"      = data.aws_ssm_parameter.elk_username.value,
+    "ELK_SA_PASSWORD"      = data.aws_ssm_parameter.elk_password.value,
+    "AWS_SECRET_KEY"       = data.aws_ssm_parameter.aws_secret_key.value,
+    "AWS_ACCESS_KEY"       = data.aws_ssm_parameter.aws_access_key.value,
+    "HUMIO_DIRECT_ADDRESS" = data.aws_ssm_parameter.humio_direct_address.value,
   }
   container_args = []
   health_check   = false
