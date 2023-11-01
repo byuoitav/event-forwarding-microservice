@@ -78,7 +78,7 @@ func getConfigFile() {
 	// Create S3 service client
 	svc := s3.New(sess)
 
-	bucketName := "av-microservices-configs1"
+	bucketName := "av-microservices-configs"
 	objectPath := "service-config.json"
 
 	params := &s3.GetObjectInput{
