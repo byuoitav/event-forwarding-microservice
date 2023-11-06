@@ -1,4 +1,5 @@
 ## event-forwarding-microservice
+### Production Branch is Main
  [![Apache 2 License](https://img.shields.io/hexpm/l/plug.svg)](https://raw.githubusercontent.com/byuoitav/touchpanel-ui-microservice/master/LICENSE)  
 The event-forwarding-microservice receives events from the central event hub and forwards them to Redis cache and logging systems like ELK and Humio. Caches and logging systems are configured in a json file: service-config.json. 
 
