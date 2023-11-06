@@ -4,10 +4,7 @@ package config
 type Cache struct {
 	Name string `json:"name"`
 
-	//Persistence type
-	StorageType string `json:"storage-type"`
-
-	//Legacy or Defautl
+	//Legacy or Default
 	CacheType string `json:"cache-type"`
 
 	CouchInfo CouchCache `json:"couch-cache"`

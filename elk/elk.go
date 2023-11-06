@@ -14,7 +14,7 @@ import (
 	"github.com/byuoitav/common/nerr"
 )
 
-//CONST
+// CONST
 const (
 	ALERTING_TRUE  = 1
 	ALERTING_FALSE = 0
@@ -22,43 +22,44 @@ const (
 	POWER_ON       = "on"
 )
 
-//VAR
+// VAR
 var (
 	APIAddr  = os.Getenv("ELK_DIRECT_ADDRESS") // or should this be ELK_ADDR?
 	username = os.Getenv("ELK_SA_USERNAME")
 	password = os.Getenv("ELK_SA_PASSWORD")
 )
 
-//ElkBulkUpdateItem .
+// ElkBulkUpdateItem .
 type ElkBulkUpdateItem struct {
 	Index  ElkUpdateHeader
 	Delete ElkDeleteHeader
 	Doc    interface{}
 }
 
-//ElkDeleteHeader .
+// ElkDeleteHeader .
 type ElkDeleteHeader struct {
 	Header HeaderIndex `json:"delete"`
 }
 
-//ElkUpdateHeader .
+// ElkUpdateHeader .
 type ElkUpdateHeader struct {
 	Header HeaderIndex `json:"index"`
 }
 
-//HeaderIndex .
+// HeaderIndex .
 type HeaderIndex struct {
 	Index string `json:"_index"`
 	Type  string `json:"_type"`
 	ID    string `json:"_id,omitempty"`
 }
 
-//BulkUpdateResponse there are other types, but we don't worry about them, since we don't really do any smart parsing at this time.
+// BulkUpdateResponse there are other types, but we don't worry about them,
+// since we don't really do any smart parsing at this time.
 type BulkUpdateResponse struct {
 	Errors bool `json:"errors"`
 }
 
-//MakeGenericELKRequest .
+// MakeGenericELKRequest .
 func MakeGenericELKRequest(addr, method string, body interface{}, user, pass string) ([]byte, *nerr.E) {
 	log.L.Debugf("Making ELK request against: %s", addr)
 
@@ -128,7 +129,7 @@ func MakeGenericELKRequest(addr, method string, body interface{}, user, pass str
 
 }
 
-//MakeELKRequest .
+// MakeELKRequest .
 func MakeELKRequest(method, endpoint string, body interface{}) ([]byte, *nerr.E) {
 	if len(APIAddr) == 0 {
 		log.L.Fatalf("ELK_DIRECT_ADDRESS is not set.")
@@ -139,15 +140,13 @@ func MakeELKRequest(method, endpoint string, body interface{}) ([]byte, *nerr.E)
 	return MakeGenericELKRequest(addr, method, body, "", "")
 }
 
-//BulkForward preps a bulk request and forwards it.
-//Leave user and pass blank to use the env variables defined above.
+// BulkForward preps a bulk request and forwards it.
+// Leave user and pass blank to use the env variables defined above.
 func BulkForward(caller, url, user, pass string, toSend []ElkBulkUpdateItem) {
-	log.L.Infof("%v Sending bulk upsert for %v items.", caller, len(toSend))
-
 	if len(toSend) == 0 {
 		return
 	}
-
+	log.L.Infof("%v Sending bulk upsert for %v items.", caller, len(toSend))
 	//DEBUG
 	/*
 		for i := range toSend {

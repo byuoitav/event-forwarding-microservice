@@ -28,7 +28,7 @@ func init() {
 	alertRegex = regexp.MustCompile(`alerts\..+`)
 }
 
-//PushAllDevices .
+// PushAllDevices.
 func PushAllDevices(c Cache) {
 	//get all the records
 	log.L.Infof("Pushing updates for all devices to DELTA and ALL indexes")
@@ -84,7 +84,7 @@ func updateHeartbeat(v events.Event, c Cache) {
 	}
 }
 
-//ForwardAndStoreEvent .
+// ForwardAndStoreEvent .
 func ForwardAndStoreEvent(v events.Event, c Cache) (bool, *nerr.E) {
 	if len(v.GeneratingSystem) > 0 && !events.ContainsAnyTags(v, events.Heartbeat) {
 		// Try if we can
@@ -142,7 +142,7 @@ func ForwardAndStoreEvent(v events.Event, c Cache) (bool, *nerr.E) {
 	return changes, nil
 }
 
-//ForwardRoom .
+// ForwardRoom .
 func ForwardRoom(room sd.StaticRoom, changes bool, c Cache) *nerr.E {
 	list := forwarding.GetManagersForType(c.GetCacheName(), config.ROOM, config.ALL)
 	for i := range list {
@@ -158,7 +158,7 @@ func ForwardRoom(room sd.StaticRoom, changes bool, c Cache) *nerr.E {
 	return nil
 }
 
-//ForwardDevice .
+// ForwardDevice .
 func ForwardDevice(device sd.StaticDevice, changes bool, c Cache) *nerr.E {
 	list := forwarding.GetManagersForType(c.GetCacheName(), config.DEVICE, config.ALL)
 	for i := range list {
@@ -174,7 +174,8 @@ func ForwardDevice(device sd.StaticDevice, changes bool, c Cache) *nerr.E {
 	return nil
 }
 
-/*SetDeviceField returns the new device, as well as a boolean denoting if the field was already set to the provided value.
+/*
+SetDeviceField returns the new device, as well as a boolean denoting if the field was already set to the provided value.
 
 If passing in an alert, we assume that the value is a statdefinition.Alert.	Alerts are denoted by alert.<alertName>. Alerts always return true.
 
@@ -390,7 +391,7 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 	return false, t, nerr.Create(fmt.Sprintf("Field %v isn't a valid field for a device.", key), "field-error")
 }
 
-//HasTag .
+// HasTag .
 func HasTag(toCheck string, tags []string) bool {
 	for i := range tags {
 		if toCheck == tags[i] {
@@ -425,9 +426,10 @@ var translationMap = map[string]string{
 	"TECLITE": "tec-lite",
 	"CUSTOM":  "custom",
 	"SD":      "tec-sd",
+	"DEV":     "development-flag", //fake device type for testing purposes
 }
 
-//GetDeviceTypeByID .
+// GetDeviceTypeByID .
 func GetDeviceTypeByID(id string) string {
 
 	split := strings.Split(id, "-")
@@ -447,6 +449,6 @@ func GetDeviceTypeByID(id string) string {
 		}
 	}
 
-	log.L.Warnf("no valid translation for :%v", split[2])
+	log.L.Warnf("no valid translation for: %v", split[2])
 	return ""
 }

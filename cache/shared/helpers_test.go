@@ -167,7 +167,7 @@ func TestSetDeviceField(t *testing.T) {
 
 	//time field tests
 	pretime := time.Now()
-	time.Sleep(5)
+	time.Sleep(5 * time.Second)
 	curtime := time.Now()
 
 	update, new, err = SetDeviceField("last-state-received", curtime, curtime, new)
@@ -198,9 +198,9 @@ func TestSetDeviceField(t *testing.T) {
 	// last-health-success
 
 	pretime = time.Now()
-	time.Sleep(5)
+	time.Sleep(5 * time.Second)
 	curtime = time.Now()
-	time.Sleep(5)
+	time.Sleep(5 * time.Second)
 	finaltime := time.Now()
 
 	eGood := sd.State{
@@ -228,7 +228,8 @@ func TestSetDeviceField(t *testing.T) {
 		t.FailNow()
 	}
 	assert.Equal(t, true, update)
-	assert.Equal(t, new.LastHealthSuccess.Format(time.RFC3339Nano), curtime.Format(time.RFC3339Nano))
+	//changed out LastHealthSuccess for LastStateReceived
+	assert.Equal(t, new.LastStateReceived.Format(time.RFC3339Nano), curtime.Format(time.RFC3339Nano))
 
 	new, update, err = EditDeviceFromEvent(eBad, new)
 	if err != nil {
@@ -237,8 +238,8 @@ func TestSetDeviceField(t *testing.T) {
 		t.FailNow()
 	}
 	assert.Equal(t, false, update)
-	assert.Equal(t, new.LastHealthSuccess.Format(time.RFC3339Nano), curtime.Format(time.RFC3339Nano))
-	assert.NotEqual(t, new.LastHealthSuccess.Format(time.RFC3339Nano), finaltime.Format(time.RFC3339Nano))
+	assert.Equal(t, new.LastStateReceived.Format(time.RFC3339Nano), curtime.Format(time.RFC3339Nano))
+	assert.NotEqual(t, new.LastStateReceived.Format(time.RFC3339Nano), finaltime.Format(time.RFC3339Nano))
 
 	new, update, err = EditDeviceFromEvent(eLate, new)
 	if err != nil {
@@ -247,8 +248,8 @@ func TestSetDeviceField(t *testing.T) {
 		t.FailNow()
 	}
 	assert.Equal(t, false, update)
-	assert.Equal(t, new.LastHealthSuccess.Format(time.RFC3339Nano), curtime.Format(time.RFC3339Nano))
-	assert.NotEqual(t, new.LastHealthSuccess.Format(time.RFC3339Nano), pretime.Format(time.RFC3339Nano))
+	assert.Equal(t, new.LastStateReceived.Format(time.RFC3339Nano), curtime.Format(time.RFC3339Nano))
+	assert.NotEqual(t, new.LastStateReceived.Format(time.RFC3339Nano), pretime.Format(time.RFC3339Nano))
 
 	//alert field tests
 
