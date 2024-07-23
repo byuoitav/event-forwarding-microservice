@@ -28,7 +28,7 @@ func InitializeCaches() {
 		log.L.Infof("Cache %v initialized with type %v. ", i.Name, i.CacheType)
 	}
 
-	log.L.Infof("Caches Initialized.")
+	log.L.Infof("Cache Check Done.")
 }
 
 func makeCache(config config.Cache) (shared.Cache, *nerr.E) {

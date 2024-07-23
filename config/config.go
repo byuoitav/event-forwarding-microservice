@@ -78,7 +78,10 @@ func getConfigFile() {
 	// Create S3 service client
 	svc := s3.New(sess)
 
-	bucketName := "av-microservices-configs-prd" // "av-microservices-configs" in the dev environment
+	bucketName := os.Getenv("AWS_BUCKET_NAME") // "av-microservices-configs" in the dev environment
+	if len(bucketName) == 0 {
+		log.L.Infof("ERROR: AWS_BUCKET_NAME not set")
+	}
 	objectPath := "service-config.json"
 
 	params := &s3.GetObjectInput{
