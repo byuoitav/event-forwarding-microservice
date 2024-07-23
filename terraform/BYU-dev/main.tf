@@ -53,6 +53,10 @@ data "aws_ssm_parameter" "aws_secret_key" {
   name = "/env/event-forwarder-dev/aws-secret-key"
 }
 
+data "aws_ssm_parameter" "aws_bucket_name" {
+  name = "/env/event-forwarder-dev/aws_bucket_name"
+}
+
 data "aws_ssm_parameter" "humio_direct_address" {
   name = "/env/event-forwarder-dev/humio-direct-address"
 }
@@ -83,6 +87,7 @@ module "event_forwarder" {
     "ELK_SA_PASSWORD"      = data.aws_ssm_parameter.elk_password.value,
     "AWS_SECRET_KEY"       = data.aws_ssm_parameter.aws_secret_key.value,
     "AWS_ACCESS_KEY"       = data.aws_ssm_parameter.aws_access_key.value,
+    "AWS_BUCKET_NAME"      = data.aws_ssm_parameter.aws_bucket_name.value,
     "HUMIO_DIRECT_ADDRESS" = data.aws_ssm_parameter.humio_direct_address.value,
   }
   container_args = []
