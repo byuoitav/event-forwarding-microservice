@@ -68,7 +68,7 @@ module "event_forwarder" {
   // required
   name           = "event-forwarder-dev"
   image          = "ghcr.io/byuoitav/event-forwarding-microservice/event-forwarding-microservice-amd64-dev"
-  image_version  = "6c47825"
+  image_version  = "v1.1.2-dev"
   container_port = 8333
   repo_url       = "https://github.com/byuoitav/event-forwarding-microservice"
   cluster        = "av-dev"
