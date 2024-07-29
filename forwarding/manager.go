@@ -16,7 +16,7 @@ type BufferManager interface {
 	Send(toSend interface{}) error
 }
 
-// Key is made up of the CacheName-DataType-EventType
+// Key is made up of the DataType-EventType
 // e.g. default-device-all or legacy-event-all
 var managerMap map[string][]BufferManager
 var managerInit sync.Once
@@ -28,7 +28,7 @@ func initManagers() {
 
 	managerMap = make(map[string][]BufferManager)
 	for _, i := range c.Forwarders {
-		curName := fmt.Sprintf(fmt.Sprintf("%v-%v-%v", i.CacheName, i.DataType, i.EventType))
+		curName := fmt.Sprintf(fmt.Sprintf("%v-%v", i.DataType, i.EventType))
 		switch i.Type {
 		case config.ELKSTATIC:
 			switch i.DataType {
@@ -80,13 +80,13 @@ func initManagers() {
 }
 
 // GetManagersForType a
-func GetManagersForType(cacheName, dataType, eventType string) []BufferManager {
+func GetManagersForType(dataType, eventType string) []BufferManager {
 	managerInit.Do(initManagers)
 
-	log.L.Debugf("Getting %s managers for %v-%v", cacheName, dataType, eventType)
-	v, ok := managerMap[fmt.Sprintf("%s-%s-%s", cacheName, dataType, eventType)]
+	log.L.Debugf("Getting managers for %v-%v", dataType, eventType)
+	v, ok := managerMap[fmt.Sprintf("%s-%s", dataType, eventType)]
 	if !ok {
-		log.L.Debugf("Unknown manager type: %v", fmt.Sprintf("%s-%s-%s", cacheName, dataType, eventType))
+		log.L.Debugf("Unknown manager type: %v", fmt.Sprintf("%s-%s", dataType, eventType))
 		return []BufferManager{}
 	}
 	return v

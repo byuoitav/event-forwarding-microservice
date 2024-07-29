@@ -28,41 +28,7 @@ func init() {
 	alertRegex = regexp.MustCompile(`alerts\..+`)
 }
 
-// PushAllDevices.
-func PushAllDevices(c Cache) {
-	//get all the records
-	log.L.Infof("Pushing updates for all devices to DELTA and ALL indexes")
-
-	devs, err := c.GetAllDeviceRecords()
-	if err != nil {
-		log.L.Errorf(err.Addf("Couldn't push all devices").Error())
-		return
-	}
-	list := forwarding.GetManagersForType(c.GetCacheName(), config.DEVICE, config.DELTA)
-	for i := range list {
-		for j := range devs {
-			er := list[i].Send(devs[j])
-			if er != nil {
-				log.L.Warnf("Problem sending all update for devices %v. %v", devs[j].DeviceID, er.Error())
-			}
-		}
-	}
-
-	list = forwarding.GetManagersForType(c.GetCacheName(), config.DEVICE, config.ALL)
-	for i := range list {
-		for j := range devs {
-			er := list[i].Send(devs[j])
-			if er != nil {
-				log.L.Warnf("Problem sending all update for devices %v. %v", devs[j].DeviceID, er.Error())
-			}
-		}
-	}
-
-	log.L.Infof("Done sending update for all devices")
-
-}
-
-func updateHeartbeat(v events.Event, c Cache) {
+func updateHeartbeat(v events.Event) {
 	split := strings.Split(v.GeneratingSystem, "-")
 	if len(split) < 3 {
 		log.L.Debugf("invalid generating system: invalid-arguments")
@@ -78,21 +44,21 @@ func updateHeartbeat(v events.Event, c Cache) {
 		Value:            "ok",
 		Data:             "ok",
 	}
-	_, err := ForwardAndStoreEvent(heartbeatEvent, c)
+	_, err := ForwardAndStoreEvent(heartbeatEvent)
 	if err != nil {
 		log.L.Debugf("unable to create heartbeat event: %v", err.Error())
 	}
 }
 
 // ForwardAndStoreEvent .
-func ForwardAndStoreEvent(v events.Event, c Cache) (bool, *nerr.E) {
+func ForwardAndStoreEvent(v events.Event) (bool, *nerr.E) {
 	if len(v.GeneratingSystem) > 0 && !events.ContainsAnyTags(v, events.Heartbeat) {
 		// Try if we can
-		updateHeartbeat(v, c)
+		updateHeartbeat(v)
 	}
 	//Forward All if they are not "fake" heartbeats
 	if v.Key != "auto-heartbeat" {
-		list := forwarding.GetManagersForType(c.GetCacheName(), config.EVENT, config.ALL)
+		list := forwarding.GetManagersForType(config.EVENT, config.ALL)
 		for i := range list {
 			//log.L.Debugf("Going to event forwarder: %v", list[i])
 			list[i].Send(v)
@@ -104,53 +70,18 @@ func ForwardAndStoreEvent(v events.Event, c Cache) (bool, *nerr.E) {
 		return false, nil
 	}
 
-	//Cache
-	changes, newDev, err := c.StoreDeviceEvent(sd.State{
-		ID:    v.TargetDevice.DeviceID,
-		Key:   v.Key,
-		Time:  v.Timestamp,
-		Value: v.Value,
-		Tags:  v.EventTags,
-	})
-
-	if err != nil {
-		return false, err.Addf("Couldn't store and forward device event")
-	}
-
-	list := forwarding.GetManagersForType(c.GetCacheName(), config.DEVICE, config.ALL)
-	for i := range list {
-		list[i].Send(newDev)
-	}
-
-	//if there are changes and it's not a heartbeat/hardware event
-	if changes && !events.ContainsAnyTags(v, events.Heartbeat, events.HardwareInfo) {
-
-		log.L.Debugf("Event resulted in changes")
-
-		//get the event stuff to forward
-		list = forwarding.GetManagersForType(c.GetCacheName(), config.EVENT, config.DELTA)
-		for i := range list {
-			list[i].Send(v)
-		}
-
-		list = forwarding.GetManagersForType(c.GetCacheName(), config.DEVICE, config.DELTA)
-		for i := range list {
-			list[i].Send(newDev)
-		}
-	}
-
-	return changes, nil
+	return !events.ContainsAnyTags(v, events.Heartbeat, events.HardwareInfo), nil
 }
 
 // ForwardRoom .
-func ForwardRoom(room sd.StaticRoom, changes bool, c Cache) *nerr.E {
-	list := forwarding.GetManagersForType(c.GetCacheName(), config.ROOM, config.ALL)
+func ForwardRoom(room sd.StaticRoom, changes bool) *nerr.E {
+	list := forwarding.GetManagersForType(config.ROOM, config.ALL)
 	for i := range list {
 		list[i].Send(room)
 	}
 
 	if changes {
-		list = forwarding.GetManagersForType(c.GetCacheName(), config.ROOM, config.DELTA)
+		list = forwarding.GetManagersForType(config.ROOM, config.DELTA)
 		for i := range list {
 			list[i].Send(room)
 		}
@@ -159,14 +90,14 @@ func ForwardRoom(room sd.StaticRoom, changes bool, c Cache) *nerr.E {
 }
 
 // ForwardDevice .
-func ForwardDevice(device sd.StaticDevice, changes bool, c Cache) *nerr.E {
-	list := forwarding.GetManagersForType(c.GetCacheName(), config.DEVICE, config.ALL)
+func ForwardDevice(device sd.StaticDevice, changes bool) *nerr.E {
+	list := forwarding.GetManagersForType(config.DEVICE, config.ALL)
 	for i := range list {
 		list[i].Send(device)
 	}
 
 	if changes {
-		list = forwarding.GetManagersForType(c.GetCacheName(), config.DEVICE, config.DELTA)
+		list = forwarding.GetManagersForType(config.DEVICE, config.DELTA)
 		for i := range list {
 			list[i].Send(device)
 		}
