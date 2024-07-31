@@ -38,3 +38,9 @@ The event-forwarding-microservice receives events from the central event hub and
         "index-rotation-interval": "monthly"
 }
 ```
+## Humio Parser Settings
+This is the Parser Script for Humio that will correctly parse the received Json and accompanying timestamp
+```
+parseJson() | parseTimestamp("millis", field=@timestamp)
+```
+
