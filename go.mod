@@ -1,6 +1,6 @@
 module github.com/byuoitav/event-forwarding-microservice
 
-replace github.com/byuoitav/endpoint-authorization-controller => C:\Users\jamesp40\go\src\github.com\byuoitav\endpoint-authorization-controller
+// replace github.com/byuoitav/endpoint-authorization-controller => C:\Users\jamesp40\go\src\github.com\byuoitav\endpoint-authorization-controller
 
 go 1.21.1
 
