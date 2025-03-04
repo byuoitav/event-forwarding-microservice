@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 
@@ -50,7 +51,7 @@ func (f *ForwardManager) Start(ctx context.Context) error {
 	//prev, _ := log.GetLevel()
 	//log.SetLevel("info")
 
-	slog.Info("Starting forward manager with %d workers", f.Workers)
+	slog.Info(fmt.Sprintf("Starting forward manager with %d workers", f.Workers))
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel() // clean up resources if the forward manager ever exits
@@ -62,11 +63,12 @@ func (f *ForwardManager) Start(ctx context.Context) error {
 
 		go func(index int) {
 			defer f.wg.Done()
-			defer slog.Info("Closed forward manager worker %d", index)
+			defer slog.Info(fmt.Sprintf("Closed forward manager worker %d", index))
 
 			for {
 				select {
 				case <-ctx.Done():
+					slog.Info("DOING WORK!")
 					return
 				case event, ok := <-f.EventStream:
 					if !ok {
