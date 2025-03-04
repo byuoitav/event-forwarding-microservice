@@ -2,19 +2,21 @@ package shared
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
-	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/common/nerr"
-	sd "github.com/byuoitav/common/state/statedefinition"
-	"github.com/byuoitav/common/v2/events"
+	//sd "github.com/byuoitav/common/state/statedefinition"
+	//"github.com/byuoitav/common/v2/events"
+	customerror "github.com/byuoitav/event-forwarding-microservice/error"
+	"github.com/byuoitav/event-forwarding-microservice/events"
+	sd "github.com/byuoitav/event-forwarding-microservice/statedefinition"
 )
 
 // EditDeviceFromEvent .
-func EditDeviceFromEvent(e sd.State, device sd.StaticDevice) (sd.StaticDevice, bool, *nerr.E) {
+func EditDeviceFromEvent(e sd.State, device sd.StaticDevice) (sd.StaticDevice, bool, error) {
 	var changes bool
-	var err *nerr.E
+	var err error
 
 	if HasTag(events.CoreState, e.Tags) {
 		if s, ok := e.Value.(string); ok {
@@ -74,12 +76,16 @@ func EditDeviceFromEvent(e sd.State, device sd.StaticDevice) (sd.StaticDevice, b
 }
 
 // GetNewDevice .
-func GetNewDevice(id string) (sd.StaticDevice, *nerr.E) {
+func GetNewDevice(id string) (sd.StaticDevice, error) {
 
 	rm := strings.Split(id, "-")
 	if len(rm) != 3 {
-		log.L.Errorf("Invalid Device %v", id)
-		return sd.StaticDevice{}, nerr.Create(fmt.Sprintf("Can't build device manager: invalid ID %v", id), "invalid-id")
+		eLog := fmt.Sprintf("Invalid Device %v", id)
+		slog.Error(eLog)
+		errMessage := &customerror.StandardError{
+			Message: fmt.Sprintf(fmt.Sprintf("Can't build device manager: invalid ID %v", id)),
+		}
+		return sd.StaticDevice{}, errMessage
 	}
 
 	device := sd.StaticDevice{

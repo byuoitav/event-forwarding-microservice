@@ -1,11 +1,13 @@
 package memorycache
 
 import (
+	"fmt"
+	"log/slog"
 	"time"
 
-	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/common/nerr"
-	sd "github.com/byuoitav/common/state/statedefinition"
+	//sd "github.com/byuoitav/common/state/statedefinition"
+	customerror "github.com/byuoitav/event-forwarding-microservice/error"
+	sd "github.com/byuoitav/event-forwarding-microservice/statedefinition"
 )
 
 /*RoomItemManager handles managing access to a single room in a cache. Changes to the room are submitted via the IncomingWriteChan and reads are submitted via the IncomingReadChan.
@@ -16,20 +18,20 @@ type RoomItemManager struct {
 	KillChannel   chan bool
 }
 
-//RoomTransactionRequest is submitted to read/write a the room being managed by this manager
+// RoomTransactionRequest is submitted to read/write a the room being managed by this manager
 type RoomTransactionRequest struct {
 	ResponseChan chan RoomTransactionResponse
 	MergeRoom    sd.StaticRoom
 }
 
-//RoomTransactionResponse .
+// RoomTransactionResponse .
 type RoomTransactionResponse struct {
 	Changes bool          //if the Transaction Request resulted in changes
 	NewRoom sd.StaticRoom //the updated room with the changes included in the Transaction request included
-	Error   *nerr.E       //if there were errors
+	Error   error         //if there were errors
 }
 
-//GetNewRoomManager .
+// GetNewRoomManager .
 func GetNewRoomManager(id string) RoomItemManager {
 	a := RoomItemManager{
 		WriteRequests: make(chan RoomTransactionRequest, 100),
@@ -48,22 +50,25 @@ func GetNewRoomManager(id string) RoomItemManager {
 	return a
 }
 
-//StartRoomManager .
+// StartRoomManager .
 func StartRoomManager(m RoomItemManager, room sd.StaticRoom) {
 
 	var merged sd.StaticRoom
 	var changes bool
-	var err *nerr.E
+	var err error
 
 	for {
 		select {
 		case <-m.KillChannel:
-			log.L.Infof("Killing room manager for %v", room.RoomID)
+			slog.Info(fmt.Sprintf("Killing room manager for %v", room.RoomID))
 			return
 		case write := <-m.WriteRequests:
 
 			if write.MergeRoom.RoomID != room.RoomID {
-				write.ResponseChan <- RoomTransactionResponse{Error: nerr.Create("Can't chagne the ID of a room", "invalid-operation"), NewRoom: room, Changes: false}
+				retErr := &customerror.StandardError{
+					Message: "Cannot change the ID of a room",
+				}
+				write.ResponseChan <- RoomTransactionResponse{Error: retErr, NewRoom: room, Changes: false}
 
 			}
 			_, merged, changes, err = sd.CompareRooms(room, write.MergeRoom)

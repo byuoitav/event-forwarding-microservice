@@ -1,14 +1,14 @@
 package memorycache
 
 import (
-	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/common/nerr"
+	"log/slog"
+
 	"github.com/byuoitav/event-forwarding-microservice/config"
 	"github.com/robfig/cron"
 )
 
 // MakeMemoryCache .
-func MakeMemoryCache(pushCron string, c config.Cache) (*Memorycache, *nerr.E) {
+func MakeMemoryCache(pushCron string, c config.Cache) (*Memorycache, error) {
 
 	toReturn := Memorycache{
 		cacheType: "memory",
@@ -16,11 +16,11 @@ func MakeMemoryCache(pushCron string, c config.Cache) (*Memorycache, *nerr.E) {
 		name:      c.Name,
 	}
 
-	log.L.Infof("adding the cron push")
+	slog.Info("adding the cron push")
 	//build our push cron
 	er := toReturn.pushCron.AddFunc(pushCron, toReturn.PushAllDevices)
 	if er != nil {
-		log.L.Errorf("Couldn't add the push all devices cron job to the cache")
+		slog.Error("Couldn't add the push all devices cron job to the cache")
 
 	}
 

@@ -3,14 +3,14 @@ package managers
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
+	"log/slog"
 	"strings"
 	"time"
 
-	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/common/nerr"
-	sd "github.com/byuoitav/common/state/statedefinition"
+	//sd "github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/event-forwarding-microservice/couch"
+	customerror "github.com/byuoitav/event-forwarding-microservice/error"
+	sd "github.com/byuoitav/event-forwarding-microservice/statedefinition"
 )
 
 // CouchStaticDevice is just an sd StaticDevice with an _id and a _rev
@@ -26,6 +26,7 @@ type Rev struct {
 }
 
 // GetDefaultCouchDeviceBuffer starts and returns a buffer manager
+// USED - forwarding/manager.go
 func GetDefaultCouchDeviceBuffer(couchaddr, database string, interval time.Duration) *CouchDeviceBuffer {
 	//we'll need to initialize from the server
 	val := &CouchDeviceBuffer{
@@ -45,6 +46,7 @@ func GetDefaultCouchDeviceBuffer(couchaddr, database string, interval time.Durat
 }
 
 // CouchDeviceBuffer takes a static device and buffers them for storage in couch
+// USED - forwarding/manager.go
 type CouchDeviceBuffer struct {
 	incomingChannel    chan sd.StaticDevice
 	reingestionChannel chan CouchStaticDevice
@@ -63,7 +65,11 @@ func (c *CouchDeviceBuffer) Send(toSend interface{}) error {
 
 	dev, ok := toSend.(sd.StaticDevice)
 	if !ok {
-		return nerr.Create("Invalid type, couch device buffer expects a StaticDevice", "invalid-type")
+		sErr := &customerror.StandardError{
+			Message: fmt.Sprintf("Invalid type, couch device buffer expects a StaticDevice"),
+		}
+		slog.Error(sErr.Error())
+		return sErr
 	}
 
 	c.incomingChannel <- dev
@@ -73,14 +79,14 @@ func (c *CouchDeviceBuffer) Send(toSend interface{}) error {
 
 func (c *CouchDeviceBuffer) start() {
 
-	log.L.Infof("Starting couch buffer for database", c.database)
+	slog.Info("Starting couch buffer for database", c.database)
 	ticker := time.NewTicker(c.interval)
 
 	for {
 		select {
 		case <-ticker.C:
 			//send it off
-			log.L.Debugf("Sending bulk ELK update for %v", c.database)
+			slog.Debug("Sending bulk ELK update", c.database)
 
 			//send the current one
 			sendBulkDeviceUpdate(c.curBuffer, c.revChannel, c.reingestionChannel, c.couchaddr, c.database)
@@ -89,11 +95,12 @@ func (c *CouchDeviceBuffer) start() {
 			c.curBuffer = make(map[string]CouchStaticDevice)
 
 		case dev := <-c.incomingChannel:
-			log.L.Debugf("%+v", dev)
+			debugMsg := fmt.Sprintf("%+v", dev)
+			slog.Debug(debugMsg)
 			c.buffer(dev)
 
 		case revs := <-c.revChannel:
-			log.L.Debugf("updating rev numbers")
+			slog.Debug("updating rev numbers")
 			c.updateRevs(revs)
 		case redo := <-c.reingestionChannel:
 			//just dump it in, it's updated
@@ -175,10 +182,12 @@ type CouchBulkUpdateResponse struct {
 func sendBulkDeviceUpdate(toSend map[string]CouchStaticDevice, returnChan chan<- []Rev, reingestionChannel chan<- CouchStaticDevice, addr, database string) {
 
 	if len(toSend) < 1 {
-		log.L.Infof("%v/%v No devices to send, returning...", addr, database)
+		infoMsg := fmt.Sprintf("%v/%v No devices to send, returning...", addr, database)
+		slog.Info(infoMsg)
 		return
 	}
-	log.L.Infof("Sending bulk update to %v/%v", addr, database)
+	iMsg := fmt.Sprintf("Sending bulk update to %v/%v", addr, database)
+	slog.Info(iMsg)
 
 	//go through the map and create the CouchStaticUpdateBody
 	body := CouchStaticUpdateBody{}
@@ -193,11 +202,12 @@ func sendBulkDeviceUpdate(toSend map[string]CouchStaticDevice, returnChan chan<-
 		body,
 	)
 	if err != nil {
-		if err.Type == http.StatusText(417) {
+		if strings.Contains(err.Error(), "417") { // If there is a status code of 417 in response, logg out the following
 			//at least one device failed
-			log.L.Warnf("At least one document in the bulk update failed")
+			slog.Warn("At least one document in the bulk update failed")
 		}
-		log.L.Errorf("Bad response recieved from Couch: %v", err.Error())
+		slog.Error("Bad response received from Couch", err.Error())
+		slog.Debug("Response Body", resp)
 		return
 	}
 	//we unmarshal the response into the update respons
@@ -205,7 +215,8 @@ func sendBulkDeviceUpdate(toSend map[string]CouchStaticDevice, returnChan chan<-
 
 	er := json.Unmarshal(resp, &respArray)
 	if er != nil {
-		log.L.Errorf("Unknown response recieved Erorr: %v Response: %s", er.Error(), resp)
+		errMsg := fmt.Sprintf("Unknown response received Error: %v Response: %s", er.Error(), resp)
+		slog.Error(errMsg)
 		return
 	}
 	toReturn := []Rev{}
@@ -220,11 +231,13 @@ func sendBulkDeviceUpdate(toSend map[string]CouchStaticDevice, returnChan chan<-
 		} else {
 			if cur.Error == "conflict" {
 				//we need to get the new revision, then dump it back up the reingestion channel
-				log.L.Warnf("Document update conflict for %v, rectifying", cur.ID)
+				infoMsg := fmt.Sprintf("Document update conflict for %v, rectifying", cur.ID)
+				slog.Warn(infoMsg)
 				toBeFixed[cur.ID] = toSend[cur.ID]
 				continue
 			} else {
-				log.L.Errorf("Couldn't create/update document: %v. %v: %v.", cur.ID, cur.Error, cur.Reason)
+				errorMsg := fmt.Sprintf("Couldn't create/update document: %v. %v: %v.", cur.ID, cur.Error, cur.Reason)
+				slog.Error(errorMsg)
 				continue
 			}
 		}
@@ -257,7 +270,7 @@ type CouchBulkDevicesResponse struct {
 
 func getUpdatedRevs(addr, database string, toBeFixed map[string]CouchStaticDevice, reingestionChannel chan<- CouchStaticDevice) {
 	if len(toBeFixed) < 1 {
-		log.L.Debugf("no updated revs to get. Returning")
+		slog.Debug("no updated revs to get. Returning")
 		return
 	}
 
@@ -273,14 +286,16 @@ func getUpdatedRevs(addr, database string, toBeFixed map[string]CouchStaticDevic
 		b,
 	)
 	if err != nil {
-		log.L.Debugf("Couldn't complete bulk request to update couch revision numbers: %v", err.Error())
+		errorMsg := fmt.Sprintf("Couldn't complete bulk request to update couch revision numbers: %v", err.Error())
+		slog.Debug(errorMsg)
 		return
 	}
 
 	var rr CouchBulkDevicesResponse
 	er := json.Unmarshal(resp, &rr)
 	if er != nil {
-		log.L.Errorf("Unknown response recieved error: %v response: %s", er.Error(), resp)
+		errorMsg := fmt.Sprintf("Unknown response recieved error: %v response: %s", er.Error(), resp)
+		slog.Error(errorMsg)
 		return
 	}
 
@@ -292,7 +307,8 @@ func getUpdatedRevs(addr, database string, toBeFixed map[string]CouchStaticDevic
 
 			reingestionChannel <- v
 		} else {
-			log.L.Errorf("Unknown key requested while getting updated revs: %v. %v:%v", rr.Results[i].ID, rr.Results[i].Docs[0].Error.Error, rr.Results[i].Docs[0].Error.Reason)
+			errorMsg := fmt.Sprintf("Unknown key requested while getting updated revs: %v. %v:%v", rr.Results[i].ID, rr.Results[i].Docs[0].Error.Error, rr.Results[i].Docs[0].Error.Reason)
+			slog.Error(errorMsg)
 		}
 	}
 }

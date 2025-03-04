@@ -2,21 +2,26 @@ package shared
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
-	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/common/nerr"
-	sd "github.com/byuoitav/common/state/statedefinition"
+	//sd "github.com/byuoitav/common/state/statedefinition"
+	customerror "github.com/byuoitav/event-forwarding-microservice/error"
+	sd "github.com/byuoitav/event-forwarding-microservice/statedefinition"
 )
 
 // GetNewRoom .
-func GetNewRoom(id string) (sd.StaticRoom, *nerr.E) {
+func GetNewRoom(id string) (sd.StaticRoom, error) {
 
 	rm := strings.Split(id, "-")
 	if len(rm) != 2 {
-		log.L.Errorf("Invalid Room %v", id)
-		return sd.StaticRoom{}, nerr.Create(fmt.Sprintf("Can't build device manager: invalid ID %v", id), "invalid-id")
+		errorLog := fmt.Sprintf("Invalid Room %v", id)
+		slog.Error(errorLog)
+		rErr := &customerror.StandardError{
+			Message: fmt.Sprintf("Can't build device manager: invalid ID %v", id),
+		}
+		return sd.StaticRoom{}, rErr
 	}
 
 	room := sd.StaticRoom{

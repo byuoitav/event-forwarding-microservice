@@ -2,11 +2,12 @@ package helpers
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 
-	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/common/v2/events"
+	//"github.com/byuoitav/common/v2/events"
 	"github.com/byuoitav/event-forwarding-microservice/cache"
+	"github.com/byuoitav/event-forwarding-microservice/events"
 )
 
 // A ForwardManager manages events to efficiently forward them
@@ -46,22 +47,22 @@ func (f *ForwardManager) Start(ctx context.Context) error {
 		f.Workers = 1
 	}
 
-	prev, _ := log.GetLevel()
-	log.SetLevel("info")
+	//prev, _ := log.GetLevel()
+	//log.SetLevel("info")
 
-	log.L.Infof("Starting forward manager with %d workers", f.Workers)
+	slog.Info("Starting forward manager with %d workers", f.Workers)
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel() // clean up resources if the forward manager ever exits
 
-	log.SetLevel(prev)
+	//log.SetLevel(prev)
 
 	for i := 0; i < f.Workers; i++ {
 		f.wg.Add(1)
 
 		go func(index int) {
 			defer f.wg.Done()
-			defer log.L.Infof("Closed forward manager worker %d", index)
+			defer slog.Info("Closed forward manager worker %d", index)
 
 			for {
 				select {
@@ -69,7 +70,7 @@ func (f *ForwardManager) Start(ctx context.Context) error {
 					return
 				case event, ok := <-f.EventStream:
 					if !ok {
-						log.L.Warnf("forward manager event stream closed")
+						slog.Warn("forward manager event stream closed")
 						return
 					}
 
@@ -83,7 +84,7 @@ func (f *ForwardManager) Start(ctx context.Context) error {
 	}
 
 	f.wg.Wait()
-	log.L.Infof("forward manager stopped.")
+	slog.Info("forward manager stopped.")
 
 	return nil
 }

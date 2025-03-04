@@ -2,24 +2,25 @@ package rediscache
 
 import (
 	"encoding/json"
+	"fmt"
+	"log/slog"
 	"sync"
 
-	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/common/nerr"
-	sd "github.com/byuoitav/common/state/statedefinition"
+	//sd "github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/event-forwarding-microservice/cache/shared"
+	sd "github.com/byuoitav/event-forwarding-microservice/statedefinition"
 	"github.com/go-redis/redis"
 )
 
-func (rc *RedisCache) getAllDeviceKeys() ([]string, *nerr.E) {
+func (rc *RedisCache) getAllDeviceKeys() ([]string, error) {
 	return GetAllKeys(rc.devclient)
 }
-func (rc *RedisCache) getAllRoomKeys() ([]string, *nerr.E) {
+func (rc *RedisCache) getAllRoomKeys() ([]string, error) {
 	return GetAllKeys(rc.roomclient)
 }
 
-//GetAllKeys .
-func GetAllKeys(client *redis.Client) ([]string, *nerr.E) {
+// GetAllKeys .
+func GetAllKeys(client *redis.Client) ([]string, error) {
 
 	var newkeys []string
 	var keys []string
@@ -29,8 +30,8 @@ func GetAllKeys(client *redis.Client) ([]string, *nerr.E) {
 	for {
 		newkeys, cursor, err = client.Scan(cursor, "*", 50).Result()
 		if err != nil {
-			log.L.Errorf("Couldn't get all device keys: %v", err.Error())
-			return keys, nerr.Translate(err).Addf("Couldn't get all device keys")
+			slog.Error(fmt.Sprintf("Couldn't get all device keys: %v", err.Error()))
+			return keys, err
 		}
 		keys = append(keys, newkeys...)
 
@@ -90,91 +91,92 @@ func (rc *RedisCache) getRoomMu(id string) *sync.Mutex {
 	return v
 }
 
-//assumes that we've already locked the device
-func (rc *RedisCache) getDevice(id string) (sd.StaticDevice, *nerr.E) {
+// assumes that we've already locked the device
+func (rc *RedisCache) getDevice(id string) (sd.StaticDevice, error) {
 
 	var curDevice sd.StaticDevice
 	by, err := rc.devclient.Get(id).Bytes()
 	if err == redis.Nil {
 		//device doesn't exist - we can create a new oneA
-		var er *nerr.E
+		var er error
 		curDevice, er = shared.GetNewDevice(id)
 		if er != nil {
-			log.L.Errorf("Error accessing redis cache: %v", er.Error())
-			return sd.StaticDevice{}, er.Addf("Couldn't access redis cache")
+			slog.Error(fmt.Sprintf("Error accessing redis cache: %v", er.Error()))
+			return sd.StaticDevice{}, er
 		}
 	} else if err != nil {
-		log.L.Errorf("Error accessing redis cache: %v", err.Error())
-		return sd.StaticDevice{}, nerr.Translate(err).Addf("Couldn't access redis cache")
+		slog.Error(fmt.Sprintf("Error accessing redis cache: %v", err.Error()))
+		return sd.StaticDevice{}, err
 	} else {
 		err := json.Unmarshal(by, &curDevice)
 		if err != nil {
-			log.L.Errorf("Error decoding device from cache record: %v", err.Error())
-			return sd.StaticDevice{}, nerr.Translate(err).Addf("Bad data in redis cluster: %s: %s", err.Error(), by)
+			slog.Error(fmt.Sprintf("Error decoding device from cache record: %v", err.Error()))
+			return sd.StaticDevice{}, err
 		}
 	}
-	log.L.Debugf("%+v", curDevice.WebsocketCount)
+	slog.Debug(fmt.Sprintf("%+v", curDevice.WebsocketCount))
 
 	return curDevice, nil
 }
 
-//assumes that we've already locked the room
-func (rc *RedisCache) getRoom(id string) (sd.StaticRoom, *nerr.E) {
+// assumes that we've already locked the room
+func (rc *RedisCache) getRoom(id string) (sd.StaticRoom, error) {
 
 	var curRoom sd.StaticRoom
 	by, err := rc.roomclient.Get(id).Bytes()
 	if err == redis.Nil {
-		var er *nerr.E
+		var er error
 		//device doesn't exist - we can create a new one
-		log.L.Debugf("Getting new room: %v", id)
+		slog.Debug(fmt.Sprintf("Getting new room: %v", id))
 		curRoom, er = shared.GetNewRoom(id)
 		if er != nil {
-			log.L.Errorf("Couldn't generate new room from ID: %v", id)
-			return curRoom, er.Addf("Couldn't get room %v", id)
+			slog.Error(fmt.Sprintf("Couldn't generate new room from ID: %v", id))
+			return curRoom, er
 		}
 	} else if err != nil {
-		log.L.Errorf("Error accessing redis cache: %v", err.Error())
-		return sd.StaticRoom{}, nerr.Translate(err).Addf("Couldn't access redis cache")
+		slog.Error(fmt.Sprintf("Error accessing redis cache: %v", err.Error()))
+		return sd.StaticRoom{}, err
 	} else {
 		err := json.Unmarshal(by, &curRoom)
 		if err != nil {
-			return curRoom, nerr.Translate(err).Addf("Couldn't unmarshal from rediscache")
+			slog.Debug("Trying to Unmarshal", "getRoom", "error")
+			return curRoom, err
 		}
 	}
 
 	return curRoom, nil
 }
 
-//assumes that we've already locked the device
-func (rc *RedisCache) putDevice(dev sd.StaticDevice) *nerr.E {
-	log.L.Debugf("Putting device %v to redis cache", dev.DeviceID)
+// assumes that we've already locked the device
+func (rc *RedisCache) putDevice(dev sd.StaticDevice) error {
+	slog.Debug(fmt.Sprintf("Putting device %v to redis cache", dev.DeviceID))
 
 	b, err := json.Marshal(dev)
 	if err != nil {
-		log.L.Errorf("%v", err.Error())
-		return nerr.Translate(err).Addf("Couldn't encode device: %v", err.Error())
+		slog.Error(fmt.Sprintf("%v", err.Error()))
+		return err
 	}
 
 	err = rc.devclient.Set(dev.DeviceID, b, 0).Err()
 	if err != nil {
-		return nerr.Translate(err).Addf("Couldn't access redis cache")
+		return err
 	}
 
 	return nil
 }
 
-//assumes that we've already locked the room
-func (rc *RedisCache) putRoom(rm sd.StaticRoom) *nerr.E {
+// assumes that we've already locked the room
+func (rc *RedisCache) putRoom(rm sd.StaticRoom) error {
 
 	b, err := json.Marshal(rm)
 	if err != nil {
-		log.L.Errorf("%v", err.Error())
-		return nerr.Translate(err).Addf("Couldn't encode room: %v", err.Error())
+		slog.Error(fmt.Sprintf("%v", err.Error()))
+		return err
 	}
 
 	err = rc.roomclient.Set(rm.RoomID, b, 0).Err()
 	if err != nil {
-		return nerr.Translate(err).Addf("Couldn't access redis cache")
+		return err
 	}
 	return nil
 }

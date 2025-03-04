@@ -6,12 +6,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/common/nerr"
+	//"github.com/byuoitav/common/log"
+	//"github.com/byuoitav/common/nerr"
+	"github.com/byuoitav/event-forwarding-microservice/customerror"
 )
 
 var (
@@ -19,7 +21,7 @@ var (
 )
 
 // sends a http request to humio using the given method, body, and authToken
-func MakeGenericHumioRequest(addr, method string, body interface{}, authToken string) ([]byte, *nerr.E) {
+func MakeGenericHumioRequest(addr, method string, body interface{}, authToken string) ([]byte, error) {
 	var reqBody []byte
 	var err error
 
@@ -31,14 +33,15 @@ func MakeGenericHumioRequest(addr, method string, body interface{}, authToken st
 		//marshal the request
 		reqBody, err = json.Marshal(v)
 		if err != nil {
-			return []byte{}, nerr.Translate(err)
+			return []byte{}, err
 		}
 	}
 
 	//create the request
 	req, err := http.NewRequest(method, addr, bytes.NewReader(reqBody))
 	if err != nil {
-		return []byte{}, nerr.Translate(err)
+		slog.Info("Error making new request", err.Error(), "Error")
+		return []byte{}, err
 	}
 
 	// add headers
@@ -56,28 +59,36 @@ func MakeGenericHumioRequest(addr, method string, body interface{}, authToken st
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return []byte{}, nerr.Translate(err)
+		slog.Info("Error with response", err.Error(), "Error")
+		return []byte{}, err
 	}
 	defer resp.Body.Close()
 
 	//read the resp
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return []byte{}, nerr.Translate(err)
+		slog.Info("Error reading response body", err.Error(), "Error")
+		return []byte{}, err
 	}
 
 	if resp.StatusCode/100 != 2 {
+		err = &customerror.WebError{
+			StatusCode: resp.StatusCode,
+			Message:    http.StatusText(resp.StatusCode),
+		}
 		msg := fmt.Sprintf("non 200 reponse code received. code: %v, body: %s", resp.StatusCode, respBody)
-		return respBody, nerr.Create(msg, http.StatusText(resp.StatusCode))
+		slog.Error("Non 200 Response code. Code:", msg, "ERROR")
+		return respBody, err
 	}
 
 	return respBody, nil
 }
 
 // MakeHumioRequest sends an http request to humio using a direct address stored in the environment
-func MakeHumioRequest(method, endpoint string, body interface{}, authToken string) ([]byte, *nerr.E) {
+func MakeHumioRequest(method, endpoint string, body interface{}, authToken string) ([]byte, error) {
 	if len(APIAddr) == 0 {
-		log.L.Fatalf("HUMIO_DIRECT_ADDRESS is not set.")
+		slog.Error("HUMIO_DIRECT_ADDRESS is not set.")
+		os.Exit(1)
 	}
 
 	//format whole address

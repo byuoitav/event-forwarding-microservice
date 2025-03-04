@@ -2,7 +2,8 @@ package config
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
+	"log/slog"
 	"os"
 	"strings"
 	"sync"
@@ -11,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/byuoitav/common/log"
+	//"github.com/byuoitav/common/log"
 )
 
 var once sync.Once
@@ -56,10 +57,10 @@ func getConfigFile() {
 	awsAccessKey := os.Getenv("AWS_ACCESS_KEY")
 	awsSecretKey := os.Getenv("AWS_SECRET_KEY")
 	if len(awsAccessKey) == 0 {
-		log.L.Infof("ERROR: AWS_ACCESS_KEY not set")
+		slog.Info("ERROR: AWS_ACCESS_KEY not set")
 	}
 	if len(awsSecretKey) == 0 {
-		log.L.Infof("ERROR: AWS_SECRET_KEY not set")
+		slog.Info("ERROR: AWS_SECRET_KEY not set")
 	}
 	awsRegion := "us-west-2"
 
@@ -71,7 +72,7 @@ func getConfigFile() {
 
 	sess, err := session.NewSession(awsConfig)
 	if err != nil {
-		log.L.Infof("Error creating AWS session:", err)
+		slog.Info("Error creating AWS session:", err.Error(), "INFO")
 		return
 	}
 
@@ -80,7 +81,7 @@ func getConfigFile() {
 
 	bucketName := os.Getenv("AWS_BUCKET_NAME") // "av-microservices-configs" in the dev environment
 	if len(bucketName) == 0 {
-		log.L.Infof("ERROR: AWS_BUCKET_NAME not set")
+		slog.Info("ERROR: AWS_BUCKET_NAME not set")
 	}
 	objectPath := "service-config.json"
 
@@ -91,22 +92,22 @@ func getConfigFile() {
 
 	resp, err := svc.GetObject(params)
 	if err != nil {
-		log.L.Infof("Error getting object %s from bucket %s:", objectPath, bucketName, err)
+		slog.Info("Error getting object %s from bucket %s:", objectPath, bucketName, err.Error(), "INFO")
 		return
 	}
 	defer resp.Body.Close()
 
 	// Read config file
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.L.Infof("Error reading object %s from bucket %s:", objectPath, bucketName, err)
+		slog.Info("Error reading object %s from bucket %s:", objectPath, bucketName, err.Error(), "INFO")
 		return
 	}
 
 	// Unmarshal config file
 	err = json.Unmarshal(b, &config)
 	if err != nil {
-		log.L.Infof("Error unmarshalling object %s from bucket %s:", objectPath, bucketName, err)
+		slog.Info("Error unmarshalling object %s from bucket %s:", objectPath, bucketName, err.Error(), "INFO")
 		return
 	}
 

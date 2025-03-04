@@ -1,11 +1,17 @@
 package shared
 
 import (
+	"fmt"
+	"log/slog"
 	"testing"
 	"time"
 
+	//"github.com/byuoitav/common/log"
+	//sd "github.com/byuoitav/common/state/statedefinition"
+
 	"github.com/byuoitav/common/log"
-	sd "github.com/byuoitav/common/state/statedefinition"
+	sd "github.com/byuoitav/event-forwarding-microservice/statedefinition"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -83,7 +89,8 @@ func TestSetDeviceField(t *testing.T) {
 
 	update, new, err = SetDeviceField("volume", "12", time.Now(), new)
 	if err != nil {
-		log.L.Warnf("%s", err.Stack)
+		warnLog := fmt.Sprintf("%s", err.Error())
+		slog.Warn(warnLog)
 		t.Error(err.Error())
 		t.FailNow()
 	}
@@ -92,7 +99,8 @@ func TestSetDeviceField(t *testing.T) {
 
 	update, new, err = SetDeviceField("volume", "12", time.Now(), new)
 	if err != nil {
-		log.L.Warnf("%s", err.Stack)
+		warnLog := fmt.Sprintf("%s", err.Error())
+		slog.Warn(warnLog)
 		t.Error(err.Error())
 		t.FailNow()
 	}
@@ -101,7 +109,8 @@ func TestSetDeviceField(t *testing.T) {
 
 	update, new, err = SetDeviceField("volume", 100, time.Now(), new)
 	if err != nil {
-		log.L.Warnf("%s", err.Stack)
+		warnLog := fmt.Sprintf("%s", err.Error())
+		slog.Warn(warnLog)
 		t.Error(err.Error())
 		t.FailNow()
 	}
@@ -110,7 +119,8 @@ func TestSetDeviceField(t *testing.T) {
 
 	update, new, err = SetDeviceField("volume", "50", time.Now(), new)
 	if err != nil {
-		log.L.Warnf("%s", err.Stack)
+		warnLog := fmt.Sprintf("%s", err.Error())
+		slog.Warn(warnLog)
 		t.Error(err.Error())
 		t.FailNow()
 	}
@@ -125,7 +135,8 @@ func TestSetDeviceField(t *testing.T) {
 	//bool field tests
 	update, new, err = SetDeviceField("blanked", "true", time.Now(), new)
 	if err != nil {
-		log.L.Warnf("%s", err.Stack)
+		warnLog := fmt.Sprintf("%s", err.Error())
+		slog.Warn(warnLog)
 		t.Error(err.Error())
 		t.FailNow()
 	}
@@ -134,7 +145,8 @@ func TestSetDeviceField(t *testing.T) {
 
 	update, new, err = SetDeviceField("blanked", "false", time.Now(), new)
 	if err != nil {
-		log.L.Warnf("%s", err.Stack)
+		warnLog := fmt.Sprintf("%s", err.Error())
+		slog.Warn(warnLog)
 		t.Error(err.Error())
 		t.FailNow()
 	}
@@ -143,7 +155,8 @@ func TestSetDeviceField(t *testing.T) {
 
 	update, new, err = SetDeviceField("blanked", "false", time.Now(), new)
 	if err != nil {
-		log.L.Warnf("%s", err.Stack)
+		warnLog := fmt.Sprintf("%s", err.Error())
+		slog.Warn(warnLog)
 		t.Error(err.Error())
 		t.FailNow()
 	}
@@ -172,7 +185,8 @@ func TestSetDeviceField(t *testing.T) {
 
 	update, new, err = SetDeviceField("last-state-received", curtime, curtime, new)
 	if err != nil {
-		log.L.Warnf("%s", err.Stack)
+		warnLog := fmt.Sprintf("%s", err.Error())
+		slog.Warn(warnLog)
 		t.Error(err.Error())
 		t.FailNow()
 	}
@@ -181,7 +195,8 @@ func TestSetDeviceField(t *testing.T) {
 
 	update, new, err = SetDeviceField("last-state-received", pretime, pretime, new)
 	if err != nil {
-		log.L.Warnf("%s", err.Stack)
+		warnLog := fmt.Sprintf("%s", err.Error())
+		slog.Warn(warnLog)
 		t.Error(err.Error())
 		t.FailNow()
 	}
@@ -223,7 +238,8 @@ func TestSetDeviceField(t *testing.T) {
 	}
 	new, update, err = EditDeviceFromEvent(eGood, new)
 	if err != nil {
-		log.L.Warnf("%s", err.Stack)
+		warnLog := fmt.Sprintf("%s", err.Error())
+		slog.Warn(warnLog)
 		t.Error(err.Error())
 		t.FailNow()
 	}
@@ -233,7 +249,8 @@ func TestSetDeviceField(t *testing.T) {
 
 	new, update, err = EditDeviceFromEvent(eBad, new)
 	if err != nil {
-		log.L.Warnf("%s", err.Stack)
+		warnLog := fmt.Sprintf("%s", err.Error())
+		slog.Warn(warnLog)
 		t.Error(err.Error())
 		t.FailNow()
 	}
@@ -243,7 +260,8 @@ func TestSetDeviceField(t *testing.T) {
 
 	new, update, err = EditDeviceFromEvent(eLate, new)
 	if err != nil {
-		log.L.Warnf("%s", err.Stack)
+		warnLog := fmt.Sprintf("%s", err.Error())
+		slog.Warn(warnLog)
 		t.Error(err.Error())
 		t.FailNow()
 	}

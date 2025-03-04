@@ -1,13 +1,15 @@
 package memorycache
 
 import (
+	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
-	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/common/nerr"
-	sd "github.com/byuoitav/common/state/statedefinition"
+	//sd "github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/event-forwarding-microservice/cache/shared"
+	customerror "github.com/byuoitav/event-forwarding-microservice/error"
+	sd "github.com/byuoitav/event-forwarding-microservice/statedefinition"
 )
 
 /*
@@ -19,8 +21,8 @@ type DeviceItemManager struct {
 	KillChannel   chan bool
 }
 
-//DeviceTransactionRequest is submitted to read/write a the device being managed by this manager
-//If both a MergeDevice and an Event are submitted teh MergeDevice will be processed first
+// DeviceTransactionRequest is submitted to read/write a the device being managed by this manager
+// If both a MergeDevice and an Event are submitted teh MergeDevice will be processed first
 type DeviceTransactionRequest struct {
 	ResponseChan chan DeviceTransactionResponse
 
@@ -33,15 +35,15 @@ type DeviceTransactionRequest struct {
 	Event     sd.State
 }
 
-//DeviceTransactionResponse .
+// DeviceTransactionResponse .
 type DeviceTransactionResponse struct {
 	Changes   bool            //if the Transaction Request resulted in changes
 	NewDevice sd.StaticDevice //the updated device with the changes included in the Transaction request included
-	Error     *nerr.E         //if there were errors
+	Error     error           //if there were errors
 }
 
-//GetNewDeviceManager .
-func GetNewDeviceManager(id string) (DeviceItemManager, *nerr.E) {
+// GetNewDeviceManager .
+func GetNewDeviceManager(id string) (DeviceItemManager, error) {
 	a := DeviceItemManager{
 		WriteRequests: make(chan DeviceTransactionRequest, 100),
 		ReadRequests:  make(chan chan sd.StaticDevice, 100),
@@ -49,14 +51,15 @@ func GetNewDeviceManager(id string) (DeviceItemManager, *nerr.E) {
 
 	dev, err := shared.GetNewDevice(id)
 	if err != nil {
-		return a, err.Addf("Couldn't build device manager")
+		//return a, err.Addf("Couldn't build device manager")
+		return a, err
 	}
 	go StartDeviceManager(a, dev)
 	return a, nil
 }
 
-//GetNewDeviceManagerWithDevice will assume overwriting of all the info, won't initialize to default values
-func GetNewDeviceManagerWithDevice(dev sd.StaticDevice) (DeviceItemManager, *nerr.E) {
+// GetNewDeviceManagerWithDevice will assume overwriting of all the info, won't initialize to default values
+func GetNewDeviceManagerWithDevice(dev sd.StaticDevice) (DeviceItemManager, error) {
 	a := DeviceItemManager{
 		WriteRequests: make(chan DeviceTransactionRequest, 100),
 		ReadRequests:  make(chan chan sd.StaticDevice, 100),
@@ -64,25 +67,28 @@ func GetNewDeviceManagerWithDevice(dev sd.StaticDevice) (DeviceItemManager, *ner
 
 	rm := strings.Split(dev.DeviceID, "-")
 	if len(rm) != 3 {
-		return DeviceItemManager{}, nerr.Create("Invalid device, must have deviceID", "invalid")
+		retErr := &customerror.StandardError{
+			Message: "Invalid device, must have deviceID",
+		}
+		return DeviceItemManager{}, retErr
 	}
 
 	go StartDeviceManager(a, dev)
 	return a, nil
 }
 
-//StartDeviceManager is a blocking call to start that device manager listening over the read and write channels.
+// StartDeviceManager is a blocking call to start that device manager listening over the read and write channels.
 func StartDeviceManager(m DeviceItemManager, device sd.StaticDevice) {
 
 	var merged sd.StaticDevice
 	var changes bool
-	var err *nerr.E
+	var err error
 
 	for {
 		select {
 
 		case <-m.KillChannel:
-			log.L.Infof("Killing device manager for %v", device.DeviceID)
+			slog.Info(fmt.Sprintf("Killing device manager for %v", device.DeviceID))
 			return
 
 		case write := <-m.WriteRequests:
@@ -92,7 +98,11 @@ func StartDeviceManager(m DeviceItemManager, device sd.StaticDevice) {
 
 			if write.MergeDeviceEdit {
 				if write.MergeDevice.DeviceID != device.DeviceID {
-					write.ResponseChan <- DeviceTransactionResponse{Error: nerr.Create("Can't change the ID of a device", "invalid-operation"), NewDevice: device, Changes: false}
+					//write.ResponseChan <- DeviceTransactionResponse{Error: nerr.Create("Can't change the ID of a device", "invalid-operation"), NewDevice: device, Changes: false}
+					retErr := &customerror.StandardError{
+						Message: "Can't change the ID of a device",
+					}
+					write.ResponseChan <- DeviceTransactionResponse{Error: retErr, NewDevice: device, Changes: false}
 					continue
 				}
 				_, merged, changes, err = sd.CompareDevices(device, write.MergeDevice)

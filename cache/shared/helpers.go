@@ -3,17 +3,20 @@ package shared
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"regexp"
 	"strings"
 	"time"
 	"unicode"
 
-	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/common/nerr"
-	sd "github.com/byuoitav/common/state/statedefinition"
-	"github.com/byuoitav/common/v2/events"
+	//sd "github.com/byuoitav/common/state/statedefinition"
+	customerror "github.com/byuoitav/event-forwarding-microservice/error"
+	sd "github.com/byuoitav/event-forwarding-microservice/statedefinition"
+
+	//"github.com/byuoitav/common/v2/events"
 	"github.com/byuoitav/event-forwarding-microservice/config"
+	"github.com/byuoitav/event-forwarding-microservice/events"
 	"github.com/byuoitav/event-forwarding-microservice/forwarding"
 )
 
@@ -31,11 +34,12 @@ func init() {
 // PushAllDevices.
 func PushAllDevices(c Cache) {
 	//get all the records
-	log.L.Infof("Pushing updates for all devices to DELTA and ALL indexes")
+	slog.Info("Pushing updates for all devices to DELTA and ALL indexes")
 
 	devs, err := c.GetAllDeviceRecords()
 	if err != nil {
-		log.L.Errorf(err.Addf("Couldn't push all devices").Error())
+		errLog := fmt.Sprintf("Couldn't push all devices: %s", err.Error())
+		slog.Error(errLog)
 		return
 	}
 	list := forwarding.GetManagersForType(c.GetCacheName(), config.DEVICE, config.DELTA)
@@ -43,7 +47,8 @@ func PushAllDevices(c Cache) {
 		for j := range devs {
 			er := list[i].Send(devs[j])
 			if er != nil {
-				log.L.Warnf("Problem sending all update for devices %v. %v", devs[j].DeviceID, er.Error())
+				warnLog := fmt.Sprintf("Problem sending all update for devices %v. %v", devs[j].DeviceID, er.Error())
+				slog.Warn(warnLog)
 			}
 		}
 	}
@@ -53,19 +58,20 @@ func PushAllDevices(c Cache) {
 		for j := range devs {
 			er := list[i].Send(devs[j])
 			if er != nil {
-				log.L.Warnf("Problem sending all update for devices %v. %v", devs[j].DeviceID, er.Error())
+				warnLog := fmt.Sprintf("Problem sending all update for devices %v. %v", devs[j].DeviceID, er.Error())
+				slog.Warn(warnLog)
 			}
 		}
 	}
 
-	log.L.Infof("Done sending update for all devices")
+	slog.Info("Done sending update for all devices")
 
 }
 
 func updateHeartbeat(v events.Event, c Cache) {
 	split := strings.Split(v.GeneratingSystem, "-")
 	if len(split) < 3 {
-		log.L.Debugf("invalid generating system: invalid-arguments")
+		slog.Debug("invalid generating system: invalid-arguments")
 		return
 	}
 	heartbeatEvent := events.Event{
@@ -80,12 +86,13 @@ func updateHeartbeat(v events.Event, c Cache) {
 	}
 	_, err := ForwardAndStoreEvent(heartbeatEvent, c)
 	if err != nil {
-		log.L.Debugf("unable to create heartbeat event: %v", err.Error())
+		debugLog := fmt.Sprintf("unable to create heartbeat event: %v", err.Error())
+		slog.Debug(debugLog)
 	}
 }
 
 // ForwardAndStoreEvent .
-func ForwardAndStoreEvent(v events.Event, c Cache) (bool, *nerr.E) {
+func ForwardAndStoreEvent(v events.Event, c Cache) (bool, error) {
 	if len(v.GeneratingSystem) > 0 && !events.ContainsAnyTags(v, events.Heartbeat) {
 		// Try if we can
 		updateHeartbeat(v, c)
@@ -94,7 +101,8 @@ func ForwardAndStoreEvent(v events.Event, c Cache) (bool, *nerr.E) {
 	if v.Key != "auto-heartbeat" {
 		list := forwarding.GetManagersForType(c.GetCacheName(), config.EVENT, config.ALL)
 		for i := range list {
-			//log.L.Debugf("Going to event forwarder: %v", list[i])
+			debugLog := fmt.Sprintf("Going to event forwarder: %v", list[i])
+			slog.Debug(debugLog)
 			list[i].Send(v)
 		}
 	}
@@ -114,7 +122,10 @@ func ForwardAndStoreEvent(v events.Event, c Cache) (bool, *nerr.E) {
 	})
 
 	if err != nil {
-		return false, err.Addf("Couldn't store and forward device event")
+		errMessage := &customerror.StandardError{
+			Message: "Couldn't store and forward device event",
+		}
+		return false, errMessage
 	}
 
 	list := forwarding.GetManagersForType(c.GetCacheName(), config.DEVICE, config.ALL)
@@ -125,7 +136,7 @@ func ForwardAndStoreEvent(v events.Event, c Cache) (bool, *nerr.E) {
 	//if there are changes and it's not a heartbeat/hardware event
 	if changes && !events.ContainsAnyTags(v, events.Heartbeat, events.HardwareInfo) {
 
-		log.L.Debugf("Event resulted in changes")
+		slog.Debug("Event resulted in changes")
 
 		//get the event stuff to forward
 		list = forwarding.GetManagersForType(c.GetCacheName(), config.EVENT, config.DELTA)
@@ -143,7 +154,7 @@ func ForwardAndStoreEvent(v events.Event, c Cache) (bool, *nerr.E) {
 }
 
 // ForwardRoom .
-func ForwardRoom(room sd.StaticRoom, changes bool, c Cache) *nerr.E {
+func ForwardRoom(room sd.StaticRoom, changes bool, c Cache) error {
 	list := forwarding.GetManagersForType(c.GetCacheName(), config.ROOM, config.ALL)
 	for i := range list {
 		list[i].Send(room)
@@ -159,7 +170,7 @@ func ForwardRoom(room sd.StaticRoom, changes bool, c Cache) *nerr.E {
 }
 
 // ForwardDevice .
-func ForwardDevice(device sd.StaticDevice, changes bool, c Cache) *nerr.E {
+func ForwardDevice(device sd.StaticDevice, changes bool, c Cache) error {
 	list := forwarding.GetManagersForType(c.GetCacheName(), config.DEVICE, config.ALL)
 	for i := range list {
 		list[i].Send(device)
@@ -181,15 +192,17 @@ If passing in an alert, we assume that the value is a statdefinition.Alert.	Aler
 
 NOTE: If in the code you can formulate a separate StaticDevice and compare it, defer to that approach, as the performance gain is quite significant.
 */
-func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.StaticDevice) (bool, sd.StaticDevice, *nerr.E) {
+func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.StaticDevice) (bool, sd.StaticDevice, error) {
 	val := reflect.TypeOf(t)
-	log.L.Debugf("Kind: %v", val.Kind())
+	debugLog := fmt.Sprintf("Kind: %v", val.Kind())
+	slog.Debug(debugLog)
 
 	//check the update times case to see if we even need to proceed.
 	v, ok := t.UpdateTimes[key]
 	if ok {
 		if v.After(updateTime) { //the current update is more recent
-			log.L.Infof("Discarding update %v:%v for device %v as we have a more recent update", key, value, t.DeviceID)
+			infoLog := fmt.Sprintf("Discarding update %v:%v for device %v as we have a more recent update", key, value, t.DeviceID)
+			slog.Info(infoLog)
 			return false, t, nil
 		}
 	}
@@ -203,7 +216,10 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 	if alertRegex.MatchString(key) {
 		v, ok := value.(sd.Alert)
 		if !ok {
-			return false, t, nerr.Create(fmt.Sprintf("Can't assign a non alert %v to alert value %v.", value, key), "format-error")
+			errMessage := &customerror.StandardError{
+				Message: fmt.Sprintf("Can't assign a non alert %v to alert value %v.", value, key),
+			}
+			return false, t, errMessage
 		}
 
 		if t.Alerts == nil {
@@ -238,26 +254,34 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 	case string:
 		strvalue = value.(string)
 	case sd.Alert:
-		return false, t, nerr.Create(fmt.Sprintf("Unsupported type %v. Alerts may only be used in an alert field (alert.X", reflect.TypeOf(value)), "format-error")
+		errMessage := &customerror.StandardError{
+			Message: fmt.Sprintf("Unsupported type %v. Alerts may only be used in an alert field (alert.X", reflect.TypeOf(value)),
+		}
+		return false, t, errMessage
 	default:
-		return false, t, nerr.Create(fmt.Sprintf("Unsupported type %v.", reflect.TypeOf(value)), "format-error")
-
+		errMessage := &customerror.StandardError{
+			Message: fmt.Sprintf("Unsupported type %v.", reflect.TypeOf(value)),
+		}
+		return false, t, errMessage
 	}
 
 	for i := 0; i < val.NumField(); i++ {
 		cur := val.Field(i)
-		//log.L.Debugf("curType: %+v", cur)
+		dLog := fmt.Sprintf("curType: %+v", cur)
+		slog.Debug(dLog)
 		jsonTag := cur.Tag.Get("json")
 
 		jsonTag = strings.Split(jsonTag, ",")[0] //remove the 'omitempty' if any
 		if jsonTag == key {
-			log.L.Debugf("Found: %+v", strvalue)
+			debugLog := fmt.Sprintf("Found: %+v", strvalue)
+			slog.Debug(debugLog)
 		} else {
 			continue
 		}
 
 		curval := reflect.ValueOf(&t).Elem().Field(i)
-		log.L.Debugf("Type: %v", curval.Type())
+		debugLog := fmt.Sprintf("Type: %v", curval.Type())
+		slog.Debug(debugLog)
 
 		if curval.CanSet() {
 			//check for nil UpdateTimes map
@@ -268,12 +292,16 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 			thistype := curval.Type()
 			switch thistype {
 			case stringtype:
-				log.L.Debugf("string")
+				slog.Debug("string")
 				var a string
 				err := json.Unmarshal([]byte("\""+strvalue+"\""), &a)
 				if err != nil {
-					log.L.Debugf("ERROR: %v", err.Error())
-					return false, t, nerr.Translate(err).Addf("Couldn't unmarshal strvalue %v into the field %v.", strvalue, key)
+					debugLog := fmt.Sprintf("ERROR: %v", err.Error())
+					slog.Debug(debugLog)
+					errLog := &customerror.StandardError{
+						Message: fmt.Sprintf("Couldn't unmarshal strvalue %v into the field %v.", strvalue, key),
+					}
+					return false, t, errLog
 				}
 
 				//update the time that it was 'last' set
@@ -281,7 +309,8 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 
 				prevValue := curval.Interface().(string)
 
-				log.L.Debugf("PrevValue: %v, curValue: %v", prevValue, a)
+				debugLog := fmt.Sprintf("PrevValue: %v, curValue: %v", prevValue, a)
+				slog.Debug(debugLog)
 
 				if a == prevValue {
 					//no change
@@ -293,11 +322,16 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 				return true, t, nil
 
 			case timetype:
-				log.L.Debugf("time")
+				slog.Debug("time")
 				var a time.Time
 				err := json.Unmarshal([]byte(strvalue), &a)
 				if err != nil {
-					return false, t, nerr.Translate(err).Addf("Couldn't unmarshal strvalue %v into the field %v.", strvalue, key)
+					errLog := fmt.Sprintf("Couldn't unmarshal strvalue %v into the field %v.", strvalue, key)
+					slog.Error(errLog)
+					eLog := &customerror.StandardError{
+						Message: errLog,
+					}
+					return false, t, eLog
 				}
 
 				//update the time that it was 'last' set
@@ -314,11 +348,16 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 				return true, t, nil
 
 			case booltype:
-				log.L.Debugf("bool")
+				slog.Debug("bool")
 				var a bool
 				err := json.Unmarshal([]byte(strvalue), &a)
 				if err != nil {
-					return false, t, nerr.Translate(err).Addf("Couldn't unmarshal strvalue %v into the field %v.", strvalue, key)
+					errLog := fmt.Sprintf("Couldn't unmarshal strvalue %v into the field %v.", strvalue, key)
+					slog.Error(errLog)
+					eLog := &customerror.StandardError{
+						Message: errLog,
+					}
+					return false, t, eLog
 				}
 
 				//update the time that it was 'last' set
@@ -335,12 +374,16 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 				return true, t, nil
 
 			case inttype:
-				log.L.Debugf("int")
+				slog.Debug("int")
 				var a int
 				err := json.Unmarshal([]byte(strvalue), &a)
 				if err != nil {
-					log.L.Warnf("%+v", err)
-					return false, t, nerr.Translate(err).Addf("Couldn't unmarshal strvalue %v into the field %v.", strvalue, key)
+					warnLog := fmt.Sprintf("%+v", err)
+					slog.Warn(warnLog)
+					eLog := &customerror.StandardError{
+						Message: fmt.Sprintf("Couldn't unmarshal strvalue %v into the field %v.", strvalue, key),
+					}
+					return false, t, eLog
 				}
 
 				//update the time that it was 'last' set
@@ -357,12 +400,16 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 
 				return true, t, nil
 			case float64type:
-				log.L.Debugf("float64")
+				slog.Debug("float64")
 				var a float64
 				err := json.Unmarshal([]byte(strvalue), &a)
 				if err != nil {
-					log.L.Warnf("%+v", err)
-					return false, t, nerr.Translate(err).Addf("Couldn't unmarshal strvalue %v into the field %v.", strvalue, key)
+					warnLog := fmt.Sprintf("%+v", err)
+					slog.Warn(warnLog)
+					eLog := &customerror.StandardError{
+						Message: fmt.Sprintf("Couldn't unmarshal strvalue %v into the field %v.", strvalue, key),
+					}
+					return false, t, eLog
 				}
 
 				//update the time that it was 'last' set
@@ -379,16 +426,25 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 
 				return true, t, nil
 			default:
-				return false, t, nerr.Create(fmt.Sprintf("Field %v is an unsupported type %v", key, thistype), "unknown-type")
+				eLog := &customerror.StandardError{
+					Message: fmt.Sprintf(fmt.Sprintf("Field %v is an unsupported type %v", key, thistype)),
+				}
+				return false, t, eLog
 			}
 
 		} else {
-			return false, t, nerr.Create(fmt.Sprintf("There was a problem setting field %v, field is not settable", key), "field-error")
+			eLog := &customerror.StandardError{
+				Message: fmt.Sprintf("There was a problem setting field %v, field is not settable", key),
+			}
+			return false, t, eLog
 		}
 	}
 
 	//if we made it here, it means that the field isn't found
-	return false, t, nerr.Create(fmt.Sprintf("Field %v isn't a valid field for a device.", key), "field-error")
+	eLog := &customerror.StandardError{
+		Message: fmt.Sprintf("Field %v isn't a valid field for a device.", key),
+	}
+	return false, t, eLog
 }
 
 // HasTag .
@@ -434,7 +490,8 @@ func GetDeviceTypeByID(id string) string {
 
 	split := strings.Split(id, "-")
 	if len(split) != 3 {
-		log.L.Warnf("[dispatcher] Invalid hostname for device: %v", id)
+		warnLog := fmt.Sprintf("[dispatcher] Invalid hostname for device: %v", id)
+		slog.Warn(warnLog)
 		return ""
 	}
 
@@ -442,13 +499,15 @@ func GetDeviceTypeByID(id string) string {
 		if unicode.IsDigit(char) {
 			val, ok := translationMap[split[2][:pos]]
 			if !ok {
-				log.L.Warnf("Invalid device type: %v", split[2][:pos])
+				warnLog := fmt.Sprintf("Invalid device type: %v", split[2][:pos])
+				slog.Warn(warnLog)
 				return "unknown"
 			}
 			return val
 		}
 	}
 
-	log.L.Warnf("no valid translation for: %v", split[2])
+	warnLog := fmt.Sprintf("no valid translation for: %v", split[2])
+	slog.Warn(warnLog)
 	return ""
 }

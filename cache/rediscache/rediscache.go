@@ -3,16 +3,21 @@ package rediscache
 import (
 	"encoding/gob"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
-	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/common/nerr"
-	sd "github.com/byuoitav/common/state/statedefinition"
-	"github.com/byuoitav/common/v2/events"
+	//"github.com/byuoitav/common/nerr"
+	//sd "github.com/byuoitav/common/state/statedefinition"
+	sd "github.com/byuoitav/event-forwarding-microservice/statedefinition"
+
+	//"github.com/byuoitav/common/v2/events"
 	"github.com/byuoitav/event-forwarding-microservice/cache/shared"
 	"github.com/byuoitav/event-forwarding-microservice/config"
+	customerror "github.com/byuoitav/event-forwarding-microservice/error"
+	"github.com/byuoitav/event-forwarding-microservice/events"
 	"github.com/go-redis/redis"
 )
 
@@ -38,7 +43,7 @@ func init() {
 }
 
 // MakeRedisCache .
-func MakeRedisCache(pushCron string, configuration config.Cache) (shared.Cache, *nerr.E) {
+func MakeRedisCache(pushCron string, configuration config.Cache) (shared.Cache, error) {
 
 	//substitute the password if needed
 	pass := config.ReplaceEnv(configuration.RedisInfo.Password)
@@ -68,7 +73,10 @@ func MakeRedisCache(pushCron string, configuration config.Cache) (shared.Cache, 
 
 	_, err := toReturn.devclient.Ping().Result()
 	if err != nil {
-		return toReturn, nerr.Translate(err).Addf("Couldn't communicate with redis server at %v", addr)
+		errLog := &customerror.StandardError{
+			Message: fmt.Sprintf("Couldn't communicate with redis server at %v", addr),
+		}
+		return toReturn, errLog
 	}
 
 	toReturn.roomclient = redis.NewClient(&redis.Options{
@@ -79,35 +87,48 @@ func MakeRedisCache(pushCron string, configuration config.Cache) (shared.Cache, 
 
 	_, err = toReturn.roomclient.Ping().Result()
 	if err != nil {
-		return toReturn, nerr.Translate(err).Addf("Couldn't communicate with redis server at %v", addr)
+		errLog := &customerror.StandardError{
+			Message: fmt.Sprintf("Couldn't communicate with redis server at %v", addr),
+		}
+		return toReturn, errLog
 	}
 
 	return toReturn, nil
 }
 
 // CheckAndStoreDevice .
-func (rc *RedisCache) CheckAndStoreDevice(device sd.StaticDevice) (bool, sd.StaticDevice, *nerr.E) {
+func (rc *RedisCache) CheckAndStoreDevice(device sd.StaticDevice) (bool, sd.StaticDevice, error) {
 	v := rc.getDeviceMu(device.DeviceID)
-	log.L.Debugf("Waiting for lock on device %v", device.DeviceID)
+	debugLog := fmt.Sprintf("Waiting for lock on device %v", device.DeviceID)
+	slog.Debug(debugLog)
 	v.Lock()
 	defer v.Unlock()
-	log.L.Debugf("Working on device %v", device.DeviceID)
+	slog.Debug(fmt.Sprintf("Working on device %v", device.DeviceID))
 
 	dev, err := rc.getDevice(device.DeviceID)
 	if err != nil {
-		return false, dev, err.Addf("Couldn't check and store device")
+		errLog := &customerror.StandardError{
+			Message: "Couldn't check and store device",
+		}
+		return false, dev, errLog
 	}
-	log.L.Debugf("Device: %+v", device)
+	slog.Debug(fmt.Sprintf("Device: %+v", device))
 
 	_, merged, changes, err := sd.CompareDevices(device, dev)
 	if err != nil {
-		return false, dev, err.Addf("Couldn't check and store device")
+		errLog := &customerror.StandardError{
+			Message: "Couldn't check and store device",
+		}
+		return false, dev, errLog
 	}
-	log.L.Debugf("Merged: %+v", merged)
+	slog.Debug(fmt.Sprintf("Merged: %+v", merged))
 
 	err = rc.putDevice(merged)
 	if err != nil {
-		return false, device, err.Addf("Couldn't check and store device")
+		errLog := &customerror.StandardError{
+			Message: "Couldn't check and store device",
+		}
+		return false, device, errLog
 	}
 
 	err = shared.ForwardDevice(merged, changes, rc)
@@ -116,29 +137,38 @@ func (rc *RedisCache) CheckAndStoreDevice(device sd.StaticDevice) (bool, sd.Stat
 }
 
 // CheckAndStoreRoom .
-func (rc *RedisCache) CheckAndStoreRoom(room sd.StaticRoom) (bool, sd.StaticRoom, *nerr.E) {
+func (rc *RedisCache) CheckAndStoreRoom(room sd.StaticRoom) (bool, sd.StaticRoom, error) {
 	v := rc.getRoomMu(room.RoomID)
 	v.Lock()
 	defer v.Unlock()
 
-	log.L.Debugf("checking and storing room %v", room)
+	slog.Debug(fmt.Sprintf("checking and storing room %v", room))
 	rm, err := rc.getRoom(room.RoomID)
 	if err != nil {
-		return false, rm, err.Addf("Couldn't check and store room")
+		errLog := &customerror.StandardError{
+			Message: "Couldn't check and store device",
+		}
+		return false, rm, errLog
 	}
-	log.L.Debugf("got room: %v", rm)
+	slog.Debug(fmt.Sprintf("got room: %v", rm))
 
 	_, merged, changes, err := sd.CompareRooms(rm, room)
 	if err != nil {
-		return false, rm, err.Addf("Couldn't check and store room")
+		errLog := &customerror.StandardError{
+			Message: "Couldn't check and store device",
+		}
+		return false, rm, errLog
 	}
 
-	log.L.Debugf("changes: %v, Room: %+v", changes, merged)
+	slog.Debug(fmt.Sprintf("changes: %v, Room: %+v", changes, merged))
 
 	if changes {
 		err := rc.putRoom(merged)
 		if err != nil {
-			return false, room, err.Addf("Couldn't check and store room")
+			errLog := &customerror.StandardError{
+				Message: "Couldn't check and store device",
+			}
+			return false, room, errLog
 		}
 	}
 
@@ -149,7 +179,7 @@ func (rc *RedisCache) CheckAndStoreRoom(room sd.StaticRoom) (bool, sd.StaticRoom
 }
 
 // GetDeviceRecord .
-func (rc *RedisCache) GetDeviceRecord(deviceID string) (sd.StaticDevice, *nerr.E) {
+func (rc *RedisCache) GetDeviceRecord(deviceID string) (sd.StaticDevice, error) {
 	//get and lock the device
 	v := rc.getDeviceMu(deviceID)
 	v.Lock()
@@ -160,7 +190,7 @@ func (rc *RedisCache) GetDeviceRecord(deviceID string) (sd.StaticDevice, *nerr.E
 }
 
 // GetRoomRecord .
-func (rc *RedisCache) GetRoomRecord(roomID string) (sd.StaticRoom, *nerr.E) {
+func (rc *RedisCache) GetRoomRecord(roomID string) (sd.StaticRoom, error) {
 	//get and lock the room
 	v := rc.getRoomMu(roomID)
 	v.Lock()
@@ -171,16 +201,22 @@ func (rc *RedisCache) GetRoomRecord(roomID string) (sd.StaticRoom, *nerr.E) {
 }
 
 // GetAllDeviceRecords .
-func (rc *RedisCache) GetAllDeviceRecords() ([]sd.StaticDevice, *nerr.E) {
+func (rc *RedisCache) GetAllDeviceRecords() ([]sd.StaticDevice, error) {
 
 	keys, er := rc.getAllDeviceKeys()
 	if er != nil {
-		return []sd.StaticDevice{}, er.Addf("Couldn't get all device records")
+		errLog := &customerror.StandardError{
+			Message: "Couldn't get all device records",
+		}
+		return []sd.StaticDevice{}, errLog
 	}
 
 	result, err := rc.devclient.MGet(keys...).Result()
 	if err != nil {
-		return []sd.StaticDevice{}, nerr.Translate(err).Addf("Couldn't get all device records")
+		errLog := &customerror.StandardError{
+			Message: "Couldn't get all device records",
+		}
+		return []sd.StaticDevice{}, errLog
 	}
 
 	var toReturn []sd.StaticDevice
@@ -190,7 +226,10 @@ func (rc *RedisCache) GetAllDeviceRecords() ([]sd.StaticDevice, *nerr.E) {
 
 		err := json.Unmarshal([]byte(result[i].(string)), &tmp)
 		if err != nil {
-			return []sd.StaticDevice{}, nerr.Translate(err).Addf("Couldn't get all device records")
+			errLog := &customerror.StandardError{
+				Message: "Couldn't get all device records",
+			}
+			return []sd.StaticDevice{}, errLog
 		}
 		toReturn = append(toReturn, tmp)
 	}
@@ -199,15 +238,21 @@ func (rc *RedisCache) GetAllDeviceRecords() ([]sd.StaticDevice, *nerr.E) {
 }
 
 // GetAllRoomRecords .
-func (rc *RedisCache) GetAllRoomRecords() ([]sd.StaticRoom, *nerr.E) {
+func (rc *RedisCache) GetAllRoomRecords() ([]sd.StaticRoom, error) {
 	keys, er := rc.getAllRoomKeys()
 	if er != nil {
-		return []sd.StaticRoom{}, er.Addf("Couldn't get all device records")
+		errLog := &customerror.StandardError{
+			Message: "Couldn't get all device records",
+		}
+		return []sd.StaticRoom{}, errLog
 	}
 
 	result, err := rc.roomclient.MGet(keys...).Result()
 	if err != nil {
-		return []sd.StaticRoom{}, nerr.Translate(err).Addf("Couldn't get all device records")
+		errLog := &customerror.StandardError{
+			Message: "Couldn't get all device records",
+		}
+		return []sd.StaticRoom{}, errLog
 	}
 
 	var toReturn []sd.StaticRoom
@@ -217,7 +262,10 @@ func (rc *RedisCache) GetAllRoomRecords() ([]sd.StaticRoom, *nerr.E) {
 
 		err := json.Unmarshal([]byte(result[i].(string)), &tmp)
 		if err != nil {
-			return []sd.StaticRoom{}, nerr.Translate(err).Addf("Couldn't get all device records")
+			errLog := &customerror.StandardError{
+				Message: "Couldn't get all device records",
+			}
+			return []sd.StaticRoom{}, errLog
 		}
 		toReturn = append(toReturn, tmp)
 	}
@@ -226,40 +274,84 @@ func (rc *RedisCache) GetAllRoomRecords() ([]sd.StaticRoom, *nerr.E) {
 }
 
 // RemoveDevice .
-func (rc *RedisCache) RemoveDevice(id string) *nerr.E {
+func (rc *RedisCache) RemoveDevice(id string) error {
 	v := rc.getDeviceMu(id)
 	v.Lock()
 	defer v.Unlock()
 
-	return nerr.Translate(rc.devclient.Del(id).Err()).Addf("Couldn't remove device %v", id)
+	// This is really muddy code: wrapping this makes my brain hurt.
+	// I am leaving this here as a tombstone to really weird code
+	// return nerr.Translate(rc.devclient.Del(id).Err()).Addf("Couldn't remove device %v", id)
+
+	err := rc.devclient.Del(id).Err()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			slog.Debug("Device does not exist in the Redis Cache")
+			// If the key doesn't exist, it's not a failure
+			return nil
+		}
+		errLog := &customerror.StandardError{
+			Message: fmt.Sprintf("Redis delete error for device %q: %w", id, err),
+		}
+		return errLog
+	}
+
+	return nil
 }
 
 // RemoveRoom .
-func (rc *RedisCache) RemoveRoom(id string) *nerr.E {
+func (rc *RedisCache) RemoveRoom(id string) error {
 
 	v := rc.getRoomMu(id)
 	v.Lock()
 	defer v.Unlock()
 
-	return nerr.Translate(rc.roomclient.Del(id).Err()).Addf("Couldn't remove room %v", id)
+	// This is combining the error return while running the actual function
+	// I am leaving this here as a tombstone to really weird code - Don't do this
+	// return nerr.Translate(rc.roomclient.Del(id).Err()).Addf("Couldn't remove room %v", id)
+
+	err := rc.roomclient.Del(id).Err()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			// If the key doesn't exist, it's not a failure
+			slog.Debug("Room does not exist in the Redis Cache")
+			return nil
+		}
+		errLog := &customerror.StandardError{
+			Message: fmt.Sprintf("Redis delete error for device %q: %w", id, err),
+		}
+		return errLog
+	}
+
+	slog.Debug(fmt.Sprintf("RemoveRoom removed the room %v", id))
+	return nil
 }
 
 // NukeRoom .
-func (rc *RedisCache) NukeRoom(id string) ([]string, *nerr.E) {
+func (rc *RedisCache) NukeRoom(id string) ([]string, error) {
 	keys, err := rc.devclient.Keys(fmt.Sprintf("%s*", id)).Result()
 	if err != nil {
-		return []string{}, nerr.Translate(err).Addf("Couldn't nuke room")
+		retErr := &customerror.StandardError{
+			Message: "Error Retrieving device info from Redis",
+		}
+		return []string{}, retErr
 	}
 
 	er := rc.RemoveRoom(id)
 	if er != nil {
-		return []string{}, er.Addf("Couldn't nuke room")
+		remErr := &customerror.StandardError{
+			Message: fmt.Sprintf("Error removing room %v from Redis in NukeRoom", id),
+		}
+		return []string{}, remErr
 	}
 
 	for i := range keys {
 		er = rc.RemoveDevice(keys[i])
 		if er != nil {
-			return []string{}, er.Addf("Couldn't nuke room")
+			devErr := &customerror.StandardError{
+				Message: fmt.Sprintf("Error removing device %v from Redis in NukeRoom", i),
+			}
+			return []string{}, devErr
 		}
 	}
 
@@ -267,9 +359,12 @@ func (rc *RedisCache) NukeRoom(id string) ([]string, *nerr.E) {
 }
 
 // StoreDeviceEvent .
-func (rc *RedisCache) StoreDeviceEvent(toSave sd.State) (bool, sd.StaticDevice, *nerr.E) {
+func (rc *RedisCache) StoreDeviceEvent(toSave sd.State) (bool, sd.StaticDevice, error) {
 	if len(toSave.ID) < 1 {
-		return false, sd.StaticDevice{}, nerr.Create("State must include device ID", "invaid-parameter")
+		devErr := &customerror.StandardError{
+			Message: "State must include device ID",
+		}
+		return false, sd.StaticDevice{}, devErr
 	}
 
 	//get and lock the device
@@ -279,13 +374,15 @@ func (rc *RedisCache) StoreDeviceEvent(toSave sd.State) (bool, sd.StaticDevice, 
 
 	dev, err := rc.getDevice(toSave.ID)
 	if err != nil {
-		return false, sd.StaticDevice{}, err.Addf("Couldn't store device event")
+		//return false, sd.StaticDevice{}, err.Addf("Couldn't store device event")
+		return false, sd.StaticDevice{}, err
 	}
 
 	//make our edits
 	merged, changes, err := shared.EditDeviceFromEvent(toSave, dev)
 	if err != nil {
-		return false, sd.StaticDevice{}, err.Addf("Couldn't store device event")
+		//return false, sd.StaticDevice{}, err.Addf("Couldn't store device event")
+		return false, sd.StaticDevice{}, err
 	}
 
 	err = rc.putDevice(merged)
@@ -294,7 +391,7 @@ func (rc *RedisCache) StoreDeviceEvent(toSave sd.State) (bool, sd.StaticDevice, 
 }
 
 // StoreAndForwardEvent .
-func (rc *RedisCache) StoreAndForwardEvent(event events.Event) (bool, *nerr.E) {
+func (rc *RedisCache) StoreAndForwardEvent(event events.Event) (bool, error) {
 	return shared.ForwardAndStoreEvent(event, rc)
 }
 

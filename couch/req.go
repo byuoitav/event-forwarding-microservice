@@ -4,13 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"sync"
 
-	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/common/nerr"
+	customerror "github.com/byuoitav/event-forwarding-microservice/error"
+	//"github.com/byuoitav/common/log"
+	//"github.com/byuoitav/common/nerr"
 )
 
 var (
@@ -20,16 +22,17 @@ var (
 )
 
 func initialize() {
-	log.L.Info("Initializing couch requests")
+	slog.Info("Initializing couch requests")
 	username = os.Getenv("DB_USERNAME")
 	password = os.Getenv("DB_PASSWORD")
 }
 
-//MakeRequest makes a generic Couch Request
-func MakeRequest(addr, method string, body interface{}) ([]byte, *nerr.E) {
+// MakeRequest makes a generic Couch Request
+// USED to make Couch Requests -> Forwarding/Managers/couch.go
+func MakeRequest(addr, method string, body interface{}) ([]byte, error) {
 	once.Do(initialize)
 
-	log.L.Debugf("Making couch request against: %s", addr)
+	slog.Debug("Making couch request against: %s", addr, "INFO")
 
 	var reqBody []byte
 	var err error
@@ -42,14 +45,15 @@ func MakeRequest(addr, method string, body interface{}) ([]byte, *nerr.E) {
 		// marshal the request
 		reqBody, err = json.Marshal(v)
 		if err != nil {
-			return []byte{}, nerr.Translate(err)
+			return []byte{}, err
 		}
 	}
 
 	// create the request
 	req, err := http.NewRequest(method, addr, bytes.NewReader(reqBody))
 	if err != nil {
-		return []byte{}, nerr.Translate(err)
+		slog.Info("Error making new request", err.Error(), "Error")
+		return []byte{}, err
 	}
 
 	// add auth
@@ -64,22 +68,31 @@ func MakeRequest(addr, method string, body interface{}) ([]byte, *nerr.E) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return []byte{}, nerr.Translate(err)
+		slog.Info("Error with response", err.Error(), "Error")
+		return []byte{}, err
 	}
 	defer resp.Body.Close()
 
 	// read the resp
-	respBody, err := ioutil.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return []byte{}, nerr.Translate(err)
+		slog.Info("Error reading response body", err.Error(), "Error")
+		return []byte{}, err
 	}
 
 	// check resp code
 	if resp.StatusCode/100 != 2 {
 		msg := fmt.Sprintf("non 200 reponse code received. code: %v, body: %s", resp.StatusCode, respBody)
-		return respBody, nerr.Create(msg, http.StatusText(resp.StatusCode))
+		slog.Info("Response Code", msg, "INFO")
+		wErr := &customerror.WebError{
+			StatusCode: resp.StatusCode,
+			Message:    "Received a non 200 response code",
+		}
+
+		return respBody, wErr
 	}
 
+	slog.Info("Response Received", "status_code", resp.StatusCode)
 	return respBody, nil
 
 }

@@ -3,10 +3,12 @@ package forwarding
 
 import (
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
-	"github.com/byuoitav/common/log"
+	//"github.com/byuoitav/common/log"
+
 	"github.com/byuoitav/event-forwarding-microservice/config"
 	"github.com/byuoitav/event-forwarding-microservice/forwarding/managers"
 )
@@ -22,7 +24,7 @@ var managerMap map[string][]BufferManager
 var managerInit sync.Once
 
 func initManagers() {
-	log.L.Infof("Initializing buffer managers")
+	slog.Info("Initializing buffer managers")
 
 	c := config.GetConfig()
 
@@ -33,7 +35,7 @@ func initManagers() {
 		case config.ELKSTATIC:
 			switch i.DataType {
 			case config.ROOM:
-				log.L.Infof("Initializing manager %v", curName)
+				slog.Info("Initializing manager", curName)
 				managerMap[curName] = append(managerMap[curName], managers.GetDefaultElkStaticRoomForwarder(
 					i.Elk.URL,
 					GetIndexFunction(i.Elk.IndexPattern, i.Elk.IndexRotationInterval),
@@ -41,7 +43,7 @@ func initManagers() {
 					i.Elk.Upsert,
 				))
 			case config.DEVICE:
-				log.L.Infof("Initializing manager %v", curName)
+				slog.Info("Initializing manager", curName)
 				managerMap[curName] = append(managerMap[curName], managers.GetDefaultElkStaticDeviceForwarder(
 					i.Elk.URL,
 					GetIndexFunction(i.Elk.IndexPattern, i.Elk.IndexRotationInterval),
@@ -50,25 +52,25 @@ func initManagers() {
 				))
 			}
 		case config.ELKTIMESERIES:
-			log.L.Infof("Initializing manager %v", curName)
+			slog.Info("Initializing manager", curName)
 			managerMap[curName] = append(managerMap[curName], managers.GetDefaultElkTimeSeries(
 				i.Elk.URL,
 				GetIndexFunction(i.Elk.IndexPattern, i.Elk.IndexRotationInterval),
 				time.Duration(i.Interval)*time.Second,
 			))
 		case config.COUCH:
-			log.L.Infof("Initializing manager %v", curName)
+			slog.Info("Initializing manager", curName)
 			managerMap[curName] = append(managerMap[curName], managers.GetDefaultCouchDeviceBuffer(
 				i.Couch.URL,
 				i.Couch.DatabaseName,
 				time.Duration(i.Interval)*time.Second,
 			))
 		case config.WEBSOCKET:
-			log.L.Infof("Initializing Websocket manager %v", curName)
+			slog.Info("Initializing Websocket manager", curName)
 			managerMap[curName] = append(managerMap[curName], managers.GetDefaultWebsocketForwarder())
 
 		case config.HUMIO:
-			log.L.Infof("Initializing Humio manager %v", curName)
+			slog.Info("Initializing Humio manager", curName)
 			managerMap[curName] = append(managerMap[curName], managers.GetDefaultHumioForwarder(
 				time.Duration(i.Humio.Interval)*time.Second,
 				i.Humio.BufferSize,
@@ -76,17 +78,18 @@ func initManagers() {
 			))
 		}
 	}
-	log.L.Infof("Buffer managers initialized")
+	slog.Info("Buffer managers initialized")
 }
 
-// GetManagersForType a
+// GetManagersForType - This is a comment -
 func GetManagersForType(cacheName, dataType, eventType string) []BufferManager {
 	managerInit.Do(initManagers)
-
-	log.L.Debugf("Getting %s managers for %v-%v", cacheName, dataType, eventType)
+	mngMsg := fmt.Sprintf("Getting %s managers for %v-%v", cacheName, dataType, eventType)
+	slog.Debug(mngMsg)
 	v, ok := managerMap[fmt.Sprintf("%s-%s-%s", cacheName, dataType, eventType)]
 	if !ok {
-		log.L.Debugf("Unknown manager type: %v", fmt.Sprintf("%s-%s-%s", cacheName, dataType, eventType))
+		mngType := fmt.Sprintf("Unknown manager type: %v", fmt.Sprintf("%s-%s-%s", cacheName, dataType, eventType))
+		slog.Debug(mngType)
 		return []BufferManager{}
 	}
 	return v
@@ -119,7 +122,9 @@ func GetIndexFunction(indexPattern, rotationInterval string) func() string {
 
 		}
 	default:
-		log.L.Fatalf("Unknown interval %v for index %v", rotationInterval, indexPattern)
+		RotErrorMsg := fmt.Sprintf("Unknown interval %v for index %v", rotationInterval, indexPattern)
+		slog.Error(RotErrorMsg)
+		os.exit(1)
 	}
 	return func() string {
 		return indexPattern
