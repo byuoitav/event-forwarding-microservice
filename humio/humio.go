@@ -13,7 +13,7 @@ import (
 
 	//"github.com/byuoitav/common/log"
 	//"github.com/byuoitav/common/nerr"
-	"github.com/byuoitav/event-forwarding-microservice/customerror"
+	customerror "github.com/byuoitav/event-forwarding-microservice/error"
 )
 
 var (

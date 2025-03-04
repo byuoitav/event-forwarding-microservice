@@ -148,9 +148,9 @@ type StaticRoom struct {
 }
 
 //CompareDevices takes a base devices, and calculates the difference between the two, returning it in the staticDevice return value. Bool denotes if there were any differences
-func CompareDevices(base, new StaticDevice) (diff StaticDevice, merged StaticDevice, changes bool, error) {
+func CompareDevices(base, new StaticDevice) (diff StaticDevice, merged StaticDevice, changes bool, err error) {
 
-	var diff StaticDevice
+	//var diff StaticDevice
 
 	//base is our base
 	merged = base
@@ -437,7 +437,6 @@ func arraysEqual(a, b []string) bool {
 
 	return true
 }
-
 
 //CompareRooms takes two rooms and compares them, changes from new to base will only be included if they have a timestamp in UpdateTimes later than that in base for the same field
 func CompareRooms(base, new StaticRoom) (diff StaticRoom, merged StaticRoom, changes bool, err error) {

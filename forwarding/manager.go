@@ -4,6 +4,7 @@ package forwarding
 import (
 	"fmt"
 	"log/slog"
+	"os"
 	"sync"
 	"time"
 
@@ -124,7 +125,7 @@ func GetIndexFunction(indexPattern, rotationInterval string) func() string {
 	default:
 		RotErrorMsg := fmt.Sprintf("Unknown interval %v for index %v", rotationInterval, indexPattern)
 		slog.Error(RotErrorMsg)
-		os.exit(1)
+		os.Exit(1)
 	}
 	return func() string {
 		return indexPattern
