@@ -83,6 +83,7 @@ func main() {
 	// Starting the Forwarder Manager which will send to the specified systems
 	go helpers.GetForwardManager().Start(context.TODO())
 
+	logger.Debug("Building Messenger.....")
 	// Connect to the Event Hub
 	messenger, err := messenger.BuildMessenger(os.Getenv("HUB_ADDRESS"), base.Messenger, 5000)
 	if err != nil {
