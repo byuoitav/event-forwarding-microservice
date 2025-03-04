@@ -64,11 +64,10 @@ func (f *ForwardManager) Start(ctx context.Context) error {
 		go func(index int) {
 			defer f.wg.Done()
 			defer slog.Info(fmt.Sprintf("Closed forward manager worker %d", index))
-
+			slog.Info("Starting worker", index)
 			for {
 				select {
 				case <-ctx.Done():
-					slog.Info("DOING WORK!")
 					return
 				case event, ok := <-f.EventStream:
 					if !ok {
@@ -77,6 +76,7 @@ func (f *ForwardManager) Start(ctx context.Context) error {
 					}
 
 					if len(f.EventCache) > 0 {
+						slog.Info("DOING WORK!")
 						//get the cache and submit for persistence
 						cache.GetCache(f.EventCache).StoreAndForwardEvent(event)
 					}
