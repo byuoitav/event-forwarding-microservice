@@ -87,7 +87,7 @@ func main() {
 	// Connect to the Event Hub
 	messenger, err := messenger.BuildMessenger(os.Getenv("HUB_ADDRESS"), base.Messenger, 5000)
 	if err != nil {
-		logger.Error("failed to build messenger: %s", err)
+		logger.Debug("failed to build messenger: %s", err)
 		os.Exit(1) // Exiting due to messenger not building properly.
 	}
 
