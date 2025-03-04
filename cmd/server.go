@@ -13,7 +13,7 @@ import (
 
 	//"github.com/byuoitav/common"
 	//"github.com/byuoitav/common/log"
-	//"github.com/byuoitav/common/v2/events"
+	oldevents "github.com/byuoitav/common/v2/events"
 	"github.com/byuoitav/event-forwarding-microservice/events"
 	"github.com/byuoitav/event-forwarding-microservice/helpers"
 	"github.com/gin-gonic/gin"
@@ -94,7 +94,9 @@ func main() {
 		messenger.SubscribeToRooms("*")
 
 		for {
-			processEvent(messenger.ReceiveEvent())
+			oldEvent := messenger.ReceiveEvent()
+			newEvent := convertEvent(oldEvent)
+			processEvent(newEvent)
 		}
 	}()
 
@@ -108,4 +110,36 @@ func main() {
 
 func processEvent(event events.Event) {
 	helpers.GetForwardManager().EventStream <- event
+}
+
+// Adding this to convert from the old common v2 events into the local events
+func convertEvent(old oldevents.Event) events.Event {
+	return events.Event{
+		GeneratingSystem: old.GeneratingSystem,
+		Timestamp:        old.Timestamp,
+		EventTags:        old.EventTags,
+		TargetDevice:     convertDevice(old.TargetDevice),
+		AffectedRoom:     convertRoom(old.AffectedRoom),
+		Key:              old.Key,
+		Value:            old.Value,
+		User:             old.User,
+		Data:             old.Data,
+	}
+}
+
+func convertDevice(oldDevice oldevents.BasicDeviceInfo) events.BasicDeviceInfo {
+	return events.BasicDeviceInfo{
+		BasicRoomInfo: events.BasicRoomInfo{
+			BuildingID: oldDevice.BuildingID,
+			RoomID:     oldDevice.RoomID,
+		},
+		DeviceID: oldDevice.DeviceID,
+	}
+}
+
+func convertRoom(oldDevice oldevents.BasicRoomInfo) events.BasicRoomInfo {
+	return events.BasicRoomInfo{
+		BuildingID: oldDevice.BuildingID,
+		RoomID:     oldDevice.RoomID,
+	}
 }
