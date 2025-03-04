@@ -37,7 +37,8 @@ func main() {
 	slog.SetDefault(logger)
 
 	// set log levels
-	logLevel.Set(slog.LevelInfo)
+	//logLevel.Set(slog.LevelInfo)
+	logLevel.Set(slog.LevelDebug)
 	if runtime.GOOS == "windows" {
 		logLevel.Set(slog.LevelDebug)
 		logger.Info("running from Windows, logging set to debug")
