@@ -93,6 +93,7 @@ func updateHeartbeat(v events.Event, c Cache) {
 
 // ForwardAndStoreEvent .
 func ForwardAndStoreEvent(v events.Event, c Cache) (bool, error) {
+	slog.Debug("ForwardAndStoreEvent")
 	if len(v.GeneratingSystem) > 0 && !events.ContainsAnyTags(v, events.Heartbeat) {
 		// Try if we can
 		updateHeartbeat(v, c)
