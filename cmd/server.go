@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -111,6 +112,7 @@ func main() {
 
 		for {
 			oldEvent := messenger.ReceiveEvent()
+			slog.Debug("DEBUG", "OLD EVENT RECEIVED", fmt.Sprintf("%v", oldEvent))
 			newEvent := convertEvent(oldEvent)
 			processEvent(newEvent)
 		}
