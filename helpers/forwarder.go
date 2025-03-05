@@ -32,7 +32,7 @@ func GetForwardManager() *ForwardManager {
 		fm = &ForwardManager{
 			Workers:     10,
 			EventStream: make(chan events.Event, 10000),
-			EventCache:  "",
+			EventCache:  "true",
 		}
 	})
 	slog.Debug("GetForwardManager()", "ForwardManager Info", fmt.Sprintf("%v", fm))
