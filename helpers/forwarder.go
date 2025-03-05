@@ -75,12 +75,18 @@ func (f *ForwardManager) Start(ctx context.Context) error {
 						slog.Warn("forward manager event stream closed")
 						return
 					}
-
-					if len(f.EventCache) > 0 {
-						slog.Debug("Storing and Forwarding Event", "Event", fmt.Sprintf(f.EventCache))
-						//get the cache and submit for persistence
+					if len(f.EventCache) == 0 {
+						slog.Warn("EventCache is empty. Skipping StoreAndForwardEvent.")
+					} else {
+						slog.Debug("Storing and Forwarding Event", "EventCache", f.EventCache)
 						cache.GetCache(f.EventCache).StoreAndForwardEvent(event)
 					}
+					/*
+						if len(f.EventCache) > 0 {
+							slog.Debug("Storing and Forwarding Event", "Event", fmt.Sprintf(f.EventCache))
+							//get the cache and submit for persistence
+							cache.GetCache(f.EventCache).StoreAndForwardEvent(event)
+						}*/
 				}
 			}
 		}(i)

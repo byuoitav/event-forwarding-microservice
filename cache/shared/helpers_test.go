@@ -3,13 +3,13 @@ package shared
 import (
 	"fmt"
 	"log/slog"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	//"github.com/byuoitav/common/log"
 	//sd "github.com/byuoitav/common/state/statedefinition"
 
-	"github.com/byuoitav/common/log"
 	sd "github.com/byuoitav/event-forwarding-microservice/statedefinition"
 
 	"github.com/stretchr/testify/assert"
@@ -319,7 +319,8 @@ func TestSetDeviceField(t *testing.T) {
 var UpdateRes bool
 
 func BenchmarkUpdateDevice(b *testing.B) {
-	log.SetLevel("fatal")
+	var level atomic.Int64
+	level.Store(int64(slog.LevelDebug))
 	base := sd.StaticDevice{}
 	var update bool
 
@@ -330,7 +331,8 @@ func BenchmarkUpdateDevice(b *testing.B) {
 }
 
 func BenchmarkCompareDevice(b *testing.B) {
-	log.SetLevel("fatal")
+	var level atomic.Int64
+	level.Store(int64(slog.LevelDebug))
 	base := sd.StaticDevice{}
 	new := sd.StaticDevice{DeviceID: "This is a test"}
 
