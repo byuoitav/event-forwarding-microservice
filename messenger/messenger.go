@@ -83,6 +83,7 @@ func (h *Messenger) SubscribeToRooms(r ...string) {
 
 	for i := range r {
 		h.subscriptionList[r[i]] = true
+		slog.Debug("Subscribing to room", fmt.Sprintf("%v", i), "Debug")
 	}
 
 	h.subscriptionChannel <- base.SubscriptionChange{

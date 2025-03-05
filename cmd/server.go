@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -102,7 +101,12 @@ func main() {
 
 	// Start the pump to get events from the hub
 	go func() {
-		logger.Debug("Starting pump to get events from the messenger", fmt.Sprintf("%v", messenger))
+		logger.Debug("Starting pump to get events from the messenger",
+			slog.Group("messenger",
+				slog.String("HubAddr", messenger.HubAddr),
+				slog.String("ConnectionType", messenger.ConnectionType),
+			),
+		)
 		messenger.SubscribeToRooms("*")
 
 		for {
