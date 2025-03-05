@@ -35,7 +35,7 @@ func GetForwardManager() *ForwardManager {
 			EventCache:  "",
 		}
 	})
-	slog.Debug("GetForwardManager()")
+	slog.Debug("GetForwardManager()", "ForwardManager Info", fmt.Sprintf("%v", fm))
 	return fm
 }
 
@@ -76,6 +76,7 @@ func (f *ForwardManager) Start(ctx context.Context) error {
 					}
 
 					if len(f.EventCache) > 0 {
+						slog.Debug("Storing and Forwarding Event", "Event", fmt.Sprintf(f.EventCache))
 						//get the cache and submit for persistence
 						cache.GetCache(f.EventCache).StoreAndForwardEvent(event)
 					}
