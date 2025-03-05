@@ -35,7 +35,7 @@ func GetForwardManager() *ForwardManager {
 			EventCache:  "",
 		}
 	})
-
+	slog.Debug("GetForwardManager()")
 	return fm
 }
 

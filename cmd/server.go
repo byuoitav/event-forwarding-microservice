@@ -114,6 +114,8 @@ func main() {
 			oldEvent := messenger.ReceiveEvent()
 			slog.Debug("DEBUG", "OLD EVENT RECEIVED", fmt.Sprintf("%v", oldEvent))
 			newEvent := convertEvent(oldEvent)
+			slog.Debug("DEBUG", "CONVERTED EVENT", fmt.Sprintf("%v", newEvent))
+
 			processEvent(newEvent)
 		}
 	}()
