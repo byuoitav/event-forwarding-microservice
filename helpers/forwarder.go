@@ -68,6 +68,8 @@ func (f *ForwardManager) Start(ctx context.Context) error {
 				case <-ctx.Done():
 					return
 				case event, ok := <-f.EventStream:
+					log.L.Infof("Here is the event on the bus: %v", event)
+					log.L.Infof("Current value of EventCache: %v", f.EventCache)
 					if !ok {
 						log.L.Warnf("forward manager event stream closed")
 						return
