@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -90,10 +91,16 @@ func main() {
 		logger.Debug("failed to build messenger: %s", err)
 		os.Exit(1) // Exiting due to messenger not building properly.
 	}
-	logger.Info("Messenger successfully built: %+v", messenger)
+
+	logger.Info("Messenger successfully built",
+		slog.Group("messenger",
+			slog.String("HubAddr", messenger.HubAddr),
+			slog.String("ConnectionType", messenger.ConnectionType),
+		),
+	)
 	// Start the pump to get events from the hub
 	go func() {
-		logger.Debug("Starting pump to get events from the messenger", messenger)
+		logger.Debug("Starting pump to get events from the messenger", fmt.Sprintf("%v", messenger))
 		messenger.SubscribeToRooms("*")
 
 		for {
