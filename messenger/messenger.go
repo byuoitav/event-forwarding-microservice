@@ -61,12 +61,13 @@ func (h *Messenger) ReceiveEvent() events.Event {
 		slog.Warn(fmt.Sprintf("Invalid event received: %v", err.Error()))
 		return events.Event{}
 	}
-
+	slog.Debug("DEBUG", "Event Received and unmarshalled", fmt.Sprintf("v%", e))
 	return e
 }
 
 // Receive .
 func (h *Messenger) Receive() base.EventWrapper {
+	slog.Debug("DEBUG", "Receive-Function", "Reading Event")
 	return <-h.readChannel
 }
 
