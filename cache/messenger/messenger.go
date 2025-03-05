@@ -4,15 +4,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"time"
 
 	"github.com/byuoitav/central-event-system/hub/base"
 	"github.com/byuoitav/central-event-system/hub/hubconn"
-	"github.com/byuoitav/common/log"
+
+	//"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
 	"github.com/byuoitav/common/v2/events"
-	"github.com/fatih/color"
+
+	//"github.com/fatih/color"
 	"github.com/gorilla/websocket"
 )
 
@@ -55,7 +58,7 @@ func (h *Messenger) ReceiveEvent() events.Event {
 	var e events.Event
 	err := json.Unmarshal(h.Receive().Event, &e)
 	if err != nil {
-		log.L.Warnf("Invalid event received: %v", err.Error())
+		slog.Warn(fmt.Sprintf("Invalid event received: %v", err.Error()))
 		return events.Event{}
 	}
 
@@ -110,7 +113,7 @@ func BuildMessenger(HubAddress, connectionType string, bufferSize int) (*Messeng
 		return nil, nerr.Createf("error", "unable to build messenger - invalid hub address '%s'", HubAddress)
 	}
 
-	log.L.Infof("starting messenger with %v, connection type %v, buffer size %v", HubAddress, connectionType, bufferSize)
+	slog.Info(fmt.Sprintf("starting messenger with %v, connection type %v, buffer size %v", HubAddress, connectionType, bufferSize))
 	h := &Messenger{
 		HubAddr:             HubAddress,
 		ConnectionType:      connectionType,
@@ -126,7 +129,7 @@ func BuildMessenger(HubAddress, connectionType string, bufferSize int) (*Messeng
 	// open connection with router
 	err := h.openConnection()
 	if err != nil {
-		log.L.Warnf("Opening connection to hub failed: %v, retrying...", err.Error())
+		slog.Warn(fmt.Sprintf("Opening connection to hub failed: %v, retrying...", err.Error()))
 
 		h.readDone <- true
 		h.writeDone <- true
@@ -137,7 +140,7 @@ func BuildMessenger(HubAddress, connectionType string, bufferSize int) (*Messeng
 
 	// update state to good
 	h.state = "good"
-	log.L.Infof(color.HiGreenString("Successfully connected to hub %s. Starting pumps...", h.HubAddr))
+	slog.Info(fmt.Sprintf("Successfully connected to hub %s. Starting pumps...", h.HubAddr))
 
 	// start read/write pumps
 	go h.startReadPump()
@@ -165,27 +168,27 @@ func (h *Messenger) retryConnection() {
 	// mark the connection as 'down'
 	h.state = h.state + " retrying"
 
-	log.L.Infof("[retry] Retrying connection, waiting for read and write pump to close before starting.")
+	slog.Info("[retry] Retrying connection, waiting for read and write pump to close before starting.")
 	//wait for read to say i'm done.
 	<-h.readDone
-	log.L.Infof("[retry] Read pump closed")
+	slog.Info("[retry] Read pump closed")
 
 	//wait for write to be done.
 	<-h.writeDone
-	log.L.Infof("[retry] Write pump closed")
-	log.L.Infof("[retry] Retrying connection")
+	slog.Info("[retry] Write pump closed")
+	slog.Info("[retry] Retrying connection")
 
 	//we retry
 	err := h.openConnection()
 
 	for err != nil {
-		log.L.Infof("[retry] Retry failed, trying to connect to %s again in %v seconds.", h.HubAddr, retryInterval)
+		slog.Info(fmt.Sprintf("[retry] Retry failed, trying to connect to %s again in %v seconds.", h.HubAddr, retryInterval))
 		time.Sleep(retryInterval)
 		err = h.openConnection()
 	}
 
 	//start the pumps again
-	log.L.Infof(color.HiGreenString("[Retry] Retry success. Starting pumps"))
+	slog.Info("[Retry] Retry success. Starting pumps")
 
 	h.state = "good"
 	go h.startReadPump()
@@ -200,20 +203,20 @@ func (h *Messenger) startReadPump() {
 	defer func() {
 		h.conn.Close()
 		if !closed {
-			log.L.Warnf("Connection to hub %v is dying.", h.HubAddr)
+			slog.Warn(fmt.Sprintf("Connection to hub %v is dying.", h.HubAddr))
 			h.state = "down"
 
 			h.readDone <- true
 
 		} else {
-			log.L.Infof("Closing messenger read pump")
+			slog.Info("Closing messenger read pump")
 			h.readDone <- true
 		}
 	}()
 
 	h.conn.SetPingHandler(
 		func(string) error {
-			log.L.Infof("[%v] Ping!", h.HubAddr)
+			slog.Info(fmt.Sprintf("[%v] Ping!", h.HubAddr))
 			h.conn.SetReadDeadline(time.Now().Add(hubconn.PingWait))
 			h.conn.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(hubconn.WriteWait))
 
@@ -237,26 +240,26 @@ func (h *Messenger) startReadPump() {
 			t, b, err := h.conn.ReadMessage()
 			if err != nil {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
-					log.L.Errorf("Websocket closing: %v", err)
+					slog.Error(fmt.Sprintf("Websocket closing: %v", err))
 				}
 				var opErr *net.OpError
 				if errors.As(err, &opErr) {
 					closed = true
 					return
 				}
-				log.L.Errorf("Error: %v", err)
+				slog.Error(fmt.Sprintf("Error: %v", err))
 				return
 			}
 
 			if t != websocket.BinaryMessage {
-				log.L.Warnf("Unknown message type %v", t)
+				slog.Warn(fmt.Sprintf("Unknown message type %v", t))
 				continue
 			}
 
 			//parse out room name
 			m, er := base.ParseMessage(b)
 			if er != nil {
-				log.L.Warnf("Poorly formed message %s: %v", b, er.Error())
+				slog.Warn(fmt.Sprintf("Poorly formed message %s: %v", b, er.Error()))
 				continue
 			}
 
@@ -271,7 +274,7 @@ func (h *Messenger) startWritePump() {
 	defer func() {
 		h.conn.Close()
 		if !closed {
-			log.L.Warnf("Connection to hub %v is dying. Trying to resurrect.", h.HubAddr)
+			slog.Warn(fmt.Sprintf("Connection to hub %v is dying. Trying to resurrect.", h.HubAddr))
 			h.state = "down"
 
 			h.writeDone <- true
@@ -280,7 +283,7 @@ func (h *Messenger) startWritePump() {
 			h.retryConnection()
 
 		} else {
-			log.L.Infof("Closing messenger write pump")
+			slog.Info("Closing messenger write pump")
 			h.writeDone <- true
 		}
 	}()
@@ -295,7 +298,7 @@ func (h *Messenger) startWritePump() {
 
 			err := h.conn.WriteMessage(websocket.BinaryMessage, base.PrepareMessage(message))
 			if err != nil {
-				log.L.Errorf("Problem writing message to socket: %v", err.Error())
+				slog.Error(fmt.Sprintf("Problem writing message to socket: %v", err.Error()))
 				return
 			}
 
@@ -315,12 +318,12 @@ func (h *Messenger) startWritePump() {
 			}
 			b, err := json.Marshal(s)
 			if err != nil {
-				log.L.Errorf("Couldn't marshal subscription change: %v", err.Error())
+				slog.Error(fmt.Sprintf("Couldn't marshal subscription change: %v", err.Error()))
 				continue
 			}
 			err = h.conn.WriteMessage(websocket.TextMessage, b)
 			if err != nil {
-				log.L.Errorf("Problem writing message to socket: %v", err.Error())
+				slog.Error(fmt.Sprintf("Problem writing message to socket: %v", err.Error()))
 				return
 			}
 		case <-h.killChan:
@@ -359,6 +362,6 @@ func (h *Messenger) getSubList() []string {
 
 // Kill kills a messenger
 func (h *Messenger) Kill() {
-	log.L.Infof("Connection to hub %v is being closed.", h.HubAddr)
+	slog.Info(fmt.Sprintf("Connection to hub %v is being closed.", h.HubAddr))
 	close(h.killChan)
 }
