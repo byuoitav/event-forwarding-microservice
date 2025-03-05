@@ -129,7 +129,22 @@ func main() {
 }
 
 func processEvent(event events.Event) {
-	helpers.GetForwardManager().EventStream <- event
+	//helpers.GetForwardManager().EventStream <- event
+	forwardManager := helpers.GetForwardManager()
+
+	if forwardManager == nil {
+		slog.Error("GetForwardManager() returned nil!")
+		return
+	}
+
+	if forwardManager.EventStream == nil {
+		slog.Error("ForwardManager.EventStream is nil! Initialization might have failed.")
+		return
+	}
+
+	slog.Debug("processEvent() received event:", "event", event)
+	forwardManager.EventStream <- event
+
 }
 
 // Adding this to convert from the old common v2 events into the local events
