@@ -70,6 +70,7 @@ func (f *ForwardManager) Start(ctx context.Context) error {
 				case <-ctx.Done():
 					return
 				case event, ok := <-f.EventStream:
+					slog.Debug("DEBUG", "Event", fmt.Sprintf("%v", event))
 					if !ok {
 						slog.Warn("forward manager event stream closed")
 						return
