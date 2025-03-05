@@ -90,9 +90,10 @@ func main() {
 		logger.Debug("failed to build messenger: %s", err)
 		os.Exit(1) // Exiting due to messenger not building properly.
 	}
-
+	logger.Info("Messenger successfully built: %+v", messenger)
 	// Start the pump to get events from the hub
 	go func() {
+		logger.Debug("Starting pump to get events from the messenger", messenger)
 		messenger.SubscribeToRooms("*")
 
 		for {
