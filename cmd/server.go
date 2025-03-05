@@ -10,7 +10,8 @@ import (
 	"runtime"
 
 	"github.com/byuoitav/central-event-system/hub/base"
-	"github.com/byuoitav/central-event-system/messenger"
+	//"github.com/byuoitav/central-event-system/messenger"
+	"github.com/byuoitav/event-forwarding-microservice/messenger"
 
 	//"github.com/byuoitav/common"
 	//"github.com/byuoitav/common/log"
@@ -98,6 +99,7 @@ func main() {
 			slog.String("ConnectionType", messenger.ConnectionType),
 		),
 	)
+
 	// Start the pump to get events from the hub
 	go func() {
 		logger.Debug("Starting pump to get events from the messenger", fmt.Sprintf("%v", messenger))
