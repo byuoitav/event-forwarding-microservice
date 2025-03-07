@@ -31,7 +31,7 @@ func initManagers() {
 
 	managerMap = make(map[string][]BufferManager)
 	for _, i := range c.Forwarders {
-		curName := fmt.Sprintf(fmt.Sprintf("%v-%v-%v", i.CacheName, i.DataType, i.EventType))
+		curName := fmt.Sprintf(fmt.Sprintf("%v-%v", i.DataType, i.EventType))
 		switch i.Type {
 		case config.ELKSTATIC:
 			switch i.DataType {
@@ -83,12 +83,12 @@ func initManagers() {
 }
 
 // GetManagersForType
-func GetManagersForType(cacheName, dataType, eventType string) []BufferManager {
+func GetManagersForType(dataType, eventType string) []BufferManager {
 	managerInit.Do(initManagers)
-	slog.Debug(fmt.Sprintf("Getting %s managers for %v-%v", cacheName, dataType, eventType))
-	v, ok := managerMap[fmt.Sprintf("%s-%s-%s", cacheName, dataType, eventType)]
+	slog.Debug(fmt.Sprintf("Getting managers for %v-%v", dataType, eventType))
+	v, ok := managerMap[fmt.Sprintf("%s-%s", dataType, eventType)]
 	if !ok {
-		slog.Debug(fmt.Sprintf("Unknown manager type: %v", fmt.Sprintf("%s-%s-%s", cacheName, dataType, eventType)))
+		slog.Debug(fmt.Sprintf("Unknown manager type: %v", fmt.Sprintf("%s-%s", dataType, eventType)))
 		return []BufferManager{}
 	}
 	return v
