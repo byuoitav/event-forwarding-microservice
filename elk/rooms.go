@@ -22,7 +22,6 @@ type roomQueryResponse struct {
 		MaxScore float64 `json:"max_score"`
 		Hits     []struct {
 			Index  string                     `json:"_index"`
-			Type   string                     `json:"_type"`
 			ID     string                     `json:"_id"`
 			Score  float64                    `json:"_score"`
 			Source statedefinition.StaticRoom `json:"_source"`
@@ -30,7 +29,7 @@ type roomQueryResponse struct {
 	} `json:"hits"`
 }
 
-//GetRoomsBulk .
+// GetRoomsBulk .
 func GetRoomsBulk(rooms []string) ([]statedefinition.StaticRoom, *nerr.E) {
 	//assume that the rooms is the array of ID's
 	query := IDQuery{}

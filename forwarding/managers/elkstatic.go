@@ -9,7 +9,7 @@ import (
 	"github.com/byuoitav/event-forwarding-microservice/elk"
 )
 
-//ElkStaticDeviceForwarder is for a device
+// ElkStaticDeviceForwarder is for a device
 type ElkStaticDeviceForwarder struct {
 	ElkStaticForwarder
 	update          bool
@@ -18,7 +18,7 @@ type ElkStaticDeviceForwarder struct {
 	buffer          map[string]elk.ElkBulkUpdateItem
 }
 
-//ElkStaticRoomForwarder is for rooms
+// ElkStaticRoomForwarder is for rooms
 type ElkStaticRoomForwarder struct {
 	ElkStaticForwarder
 	update          bool
@@ -27,14 +27,14 @@ type ElkStaticRoomForwarder struct {
 	buffer          map[string]elk.ElkBulkUpdateItem
 }
 
-//ElkStaticForwarder is the common stuff
+// ElkStaticForwarder is the common stuff
 type ElkStaticForwarder struct {
 	interval time.Duration //how often to send an update
 	url      string
 	index    func() string //function to get the indexA
 }
 
-//GetDefaultElkStaticDeviceForwarder returns a regular static device forwarder with a buffer size of 10000
+// GetDefaultElkStaticDeviceForwarder returns a regular static device forwarder with a buffer size of 10000
 func GetDefaultElkStaticDeviceForwarder(URL string, index func() string, interval time.Duration, update bool) *ElkStaticDeviceForwarder {
 	toReturn := &ElkStaticDeviceForwarder{
 		ElkStaticForwarder: ElkStaticForwarder{
@@ -52,7 +52,7 @@ func GetDefaultElkStaticDeviceForwarder(URL string, index func() string, interva
 	return toReturn
 }
 
-//Send takes a device and adds it to the buffer
+// Send takes a device and adds it to the buffer
 func (e *ElkStaticDeviceForwarder) Send(toSend interface{}) error {
 
 	var event sd.StaticDevice
@@ -71,7 +71,7 @@ func (e *ElkStaticDeviceForwarder) Send(toSend interface{}) error {
 	return nil
 }
 
-//Send takes a room and adds it to the buffer
+// Send takes a room and adds it to the buffer
 func (e *ElkStaticRoomForwarder) Send(toSend interface{}) error {
 
 	var event sd.StaticRoom
@@ -90,19 +90,19 @@ func (e *ElkStaticRoomForwarder) Send(toSend interface{}) error {
 	return nil
 }
 
-//Delete .
+// Delete .
 func (e *ElkStaticRoomForwarder) Delete(id string) error {
 	e.deleteChannel <- id
 	return nil
 }
 
-//Delete .
+// Delete .
 func (e *ElkStaticDeviceForwarder) Delete(id string) error {
 	e.deleteChannel <- id
 	return nil
 }
 
-//GetDefaultElkStaticRoomForwarder returns a regular static room forwarder with a buffer size of 10000
+// GetDefaultElkStaticRoomForwarder returns a regular static room forwarder with a buffer size of 10000
 func GetDefaultElkStaticRoomForwarder(URL string, index func() string, interval time.Duration, update bool) *ElkStaticRoomForwarder {
 	toReturn := &ElkStaticRoomForwarder{
 		ElkStaticForwarder: ElkStaticForwarder{
@@ -172,7 +172,6 @@ func (e *ElkStaticDeviceForwarder) bufferevent(event sd.StaticDevice) {
 	if !ok {
 		Header := elk.HeaderIndex{
 			Index: e.index(),
-			Type:  "av-device",
 		}
 		if e.update {
 			Header.ID = event.DeviceID
@@ -196,7 +195,6 @@ func (e *ElkStaticDeviceForwarder) deleteRecord(id string) {
 
 	Header := elk.HeaderIndex{
 		Index: e.index(),
-		Type:  "av-device",
 		ID:    id,
 	}
 	e.buffer[id] = elk.ElkBulkUpdateItem{
@@ -211,7 +209,6 @@ func (e *ElkStaticRoomForwarder) deleteRecord(id string) {
 
 	Header := elk.HeaderIndex{
 		Index: e.index(),
-		Type:  "av-room",
 		ID:    id,
 	}
 	e.buffer[id] = elk.ElkBulkUpdateItem{
@@ -229,7 +226,6 @@ func (e *ElkStaticRoomForwarder) bufferevent(event sd.StaticRoom) {
 	if !ok {
 		Header := elk.HeaderIndex{
 			Index: e.index(),
-			Type:  "av-room",
 		}
 		if e.update {
 			Header.ID = event.RoomID

@@ -49,7 +49,6 @@ type ElkUpdateHeader struct {
 // HeaderIndex .
 type HeaderIndex struct {
 	Index string `json:"_index"`
-	Type  string `json:"_type"`
 	ID    string `json:"_id,omitempty"`
 }
 
@@ -100,7 +99,7 @@ func MakeGenericELKRequest(addr, method string, body interface{}, user, pass str
 
 	// add headers
 	if method == http.MethodPost || method == http.MethodPut {
-		req.Header.Add("content-type", "application/json")
+		req.Header.Add("content-type", "application/x-ndjson")
 	}
 
 	client := http.Client{
@@ -190,6 +189,8 @@ func BulkForward(caller, url, user, pass string, toSend []ElkBulkUpdateItem) {
 		}
 	}
 
+	payload = append(payload, '\n') // Ensure the final newline
+
 	//once our payload is built
 	log.L.Debugf("%v Payload built, sending...", caller)
 	//log.L.Debugf("%s", payload)
@@ -197,8 +198,12 @@ func BulkForward(caller, url, user, pass string, toSend []ElkBulkUpdateItem) {
 	url = strings.Trim(url, "/")         //remove any trailing slash so we can append it again
 	addr := fmt.Sprintf("%v/_bulk", url) //make the addr
 
+	url = strings.Trim(url, "/")
+	addr = fmt.Sprintf("%v/_bulk", url)
+
 	resp, er := MakeGenericELKRequest(addr, "POST", payload, user, pass)
 	if er != nil {
+
 		log.L.Errorf("%v Couldn't send bulk update. error %v", caller, er.Error())
 		return
 	}

@@ -9,14 +9,14 @@ import (
 	"github.com/byuoitav/event-forwarding-microservice/elk"
 )
 
-//ElkTimeseriesForwarder NOT THREAD SAFE
+// ElkTimeseriesForwarder NOT THREAD SAFE
 type ElkTimeseriesForwarder struct {
 	incomingChannel chan events.Event
 	buffer          []elk.ElkBulkUpdateItem
 	ElkStaticForwarder
 }
 
-//GetDefaultElkTimeSeries returns a default elk event forwarder after setting it up.
+// GetDefaultElkTimeSeries returns a default elk event forwarder after setting it up.
 func GetDefaultElkTimeSeries(URL string, index func() string, interval time.Duration) *ElkTimeseriesForwarder {
 	toReturn := &ElkTimeseriesForwarder{
 		incomingChannel: make(chan events.Event, 1000),
@@ -33,7 +33,7 @@ func GetDefaultElkTimeSeries(URL string, index func() string, interval time.Dura
 	return toReturn
 }
 
-//Send .
+// Send .
 func (e *ElkTimeseriesForwarder) Send(toSend interface{}) error {
 
 	var event events.Event
@@ -52,7 +52,7 @@ func (e *ElkTimeseriesForwarder) Send(toSend interface{}) error {
 	return nil
 }
 
-//starts the manager and buffer.
+// starts the manager and buffer.
 func (e *ElkTimeseriesForwarder) start() {
 
 	log.L.Infof("Starting event forwarder for %v", e.index())
@@ -73,13 +73,12 @@ func (e *ElkTimeseriesForwarder) start() {
 	}
 }
 
-//NOT THREAD SAFE
+// NOT THREAD SAFE
 func (e *ElkTimeseriesForwarder) bufferevent(event events.Event) {
 	e.buffer = append(e.buffer, elk.ElkBulkUpdateItem{
 		Index: elk.ElkUpdateHeader{
 			Header: elk.HeaderIndex{
 				Index: e.index(),
-				Type:  "event",
 			}},
 		Doc: event,
 	})
