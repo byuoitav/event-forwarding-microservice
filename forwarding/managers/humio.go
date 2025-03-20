@@ -2,10 +2,10 @@ package managers
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"time"
 
-	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
 	"github.com/byuoitav/common/v2/events"
 	"github.com/byuoitav/event-forwarding-microservice/humio"
@@ -22,7 +22,7 @@ type HumioForwarder struct {
 
 // returns a forwarder that sends events to Humio
 func GetDefaultHumioForwarder(interval time.Duration, bufferSize int, ingestToken string) *HumioForwarder {
-	log.L.Infof("Getting default Humio forwarder with bufferSize %d and interval %s", bufferSize, interval.String())
+	slog.Info("Getting default Humio forwarder", "bufferSize", bufferSize, "interval", interval.String())
 	forwarder := &HumioForwarder{
 		interval:        interval,
 		bufferSize:      bufferSize,
@@ -52,20 +52,20 @@ func (e *HumioForwarder) Send(toSend interface{}) error {
 
 // Starts the event forwarder specific to Humio
 func (e *HumioForwarder) Start() {
-	log.L.Infof("Starting event forwarder for Humio")
+	slog.Info("Starting event forwarder for Humio")
 	ticker := time.NewTicker(e.interval)
 
 	for {
 		select {
 		case <-ticker.C:
-			if (len(e.eventsBuffer)) != 0 {
-				log.L.Debugf("Sending events to Humio")
+			if len(e.eventsBuffer) != 0 {
+				slog.Debug("Sending events to Humio")
 				e.sendBuffer()
 				e.flushBuffer()
 			}
 
 		case event := <-e.incomingChannel:
-			log.L.Debugf("Receiving Event for Humio")
+			slog.Debug("Receiving Event for Humio")
 			e.bufferevent(event)
 		}
 	}
@@ -73,13 +73,13 @@ func (e *HumioForwarder) Start() {
 
 // Adds events to the buffer
 func (e *HumioForwarder) bufferevent(event events.Event) {
-	log.L.Debugf("Buffering event from %s for Humio\n", event.GeneratingSystem)
+	slog.Debug("Buffering event for Humio", "GeneratingSystem", event.GeneratingSystem)
 	//convert events.Event to HumioEvent
 	alias := convertEvent(event)
 	e.eventsBuffer = append(e.eventsBuffer, alias)
-	//insure the buffer doesn't get too big
+	//ensure the buffer doesn't get too big
 	if len(e.eventsBuffer) > e.bufferSize-1 {
-		log.L.Debugf("Humio Buffer surpassing %d events", e.bufferSize)
+		slog.Debug("Humio Buffer surpassing limit", "bufferSize", e.bufferSize)
 		e.sendBuffer()
 		e.flushBuffer()
 	}
@@ -87,28 +87,28 @@ func (e *HumioForwarder) bufferevent(event events.Event) {
 
 // clears the buffer of all events
 func (e *HumioForwarder) flushBuffer() {
-	log.L.Debugf("Flushing buffer of %d events for Humio", len(e.eventsBuffer))
+	slog.Debug("Flushing buffer for Humio", "eventCount", len(e.eventsBuffer))
 	e.eventsBuffer = []HumioEvent{}
 }
 
 // marshals the buffer to json
 func (e *HumioForwarder) marshalBuffer() []byte {
-	log.L.Debugf("Marshaling buffer for Humio")
+	slog.Debug("Marshaling buffer for Humio")
 	logs, err := json.Marshal(e.eventsBuffer)
 	if err != nil {
-		log.L.Debugf("Failed to marshal buffer for Humio: %s", err.Error())
+		slog.Debug("Failed to marshal buffer for Humio", "error", err.Error())
 	}
-	log.L.Debugf(string(logs))
+	slog.Debug("Marshaled buffer", "logs", string(logs))
 	return logs
 }
 
 // send the buffer to humio
 func (e *HumioForwarder) sendBuffer() error {
-	log.L.Infof("Sending buffer for Humio of %d events", len(e.eventsBuffer))
+	slog.Info("Sending buffer for Humio", "eventCount", len(e.eventsBuffer))
 	if len(e.eventsBuffer) > 0 {
 		_, err := humio.MakeHumioRequest(http.MethodPost, "/api/v1/ingest/json", e.marshalBuffer(), e.ingestToken)
 		if err != nil {
-			log.L.Debugf("Failed to send buffer for Humio: %s", err.Error())
+			slog.Debug("Failed to send buffer for Humio", "error", err.Error())
 			return err
 		}
 	}
@@ -146,35 +146,16 @@ func convertEvent(event events.Event) HumioEvent {
 
 // Edits the field names to match the Humio schema
 type HumioEvent struct {
-	// GeneratingSystem is the system actually generating the event. i.e. For an API call against a raspberry pi this would be the hostname of the raspberry pi running the AV-API. If the call is against AWS, this would be 'AWS'
-	GeneratingSystem string `json:"generating-system"`
-
-	// EventTags is a collection of strings to give more information about what kind of event this is, used in routing and processing events. See the EventTags const delcaration for some common tags.
-	EventTags []string `json:"event-tags"`
-
-	// TargetDevice is the device being affected by the event. e.g. a power on event, this would be the device powering on
-	TargetDevice BasicDeviceInfo `json:"target-device"`
-
-	// AffectedRoom is the room being affected by the event. e.g. in events arising from an API call this is the room called in the API
-	AffectedRoom BasicRoomInfo `json:"affected-room"`
-
-	// Key of the event
-	Key string `json:"key"`
-
-	// Value of the event
-	Value string `json:"value"`
-
-	// User is the user associated with generating the event
-	User string `json:"user"`
-
-	// Data is an optional field to dump data that you wont necessarily want to aggregate on, but you may want to search on
-	Data interface{} `json:"data,omitempty"`
-
-	// Timestamp is the time the event took place
-	Timestamp int64 `json:"@timestamp"`
-
-	// Timezone
-	Timezone string `json:"@timezone"`
+	GeneratingSystem string          `json:"generating-system"`
+	EventTags        []string        `json:"event-tags"`
+	TargetDevice     BasicDeviceInfo `json:"target-device"`
+	AffectedRoom     BasicRoomInfo   `json:"affected-room"`
+	Key              string          `json:"key"`
+	Value            string          `json:"value"`
+	User             string          `json:"user"`
+	Data             interface{}     `json:"data,omitempty"`
+	Timestamp        int64           `json:"@timestamp"`
+	Timezone         string          `json:"@timezone"`
 }
 
 // BasicRoomInfo contains device information that is easy to aggregate on.

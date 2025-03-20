@@ -6,11 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
 )
 
@@ -77,7 +77,7 @@ func MakeGenericHumioRequest(addr, method string, body interface{}, authToken st
 // MakeHumioRequest sends an http request to humio using a direct address stored in the environment
 func MakeHumioRequest(method, endpoint string, body interface{}, authToken string) ([]byte, *nerr.E) {
 	if len(APIAddr) == 0 {
-		log.L.Fatalf("HUMIO_DIRECT_ADDRESS is not set.")
+		slog.Error("HUMIO_DIRECT_ADDRESS is not set.")
 	}
 
 	//format whole address

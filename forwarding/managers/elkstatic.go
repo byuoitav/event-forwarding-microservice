@@ -1,9 +1,9 @@
 package managers
 
 import (
+	"log/slog"
 	"time"
 
-	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
 	sd "github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/event-forwarding-microservice/elk"
@@ -121,14 +121,14 @@ func GetDefaultElkStaticRoomForwarder(URL string, index func() string, interval 
 }
 
 func (e *ElkStaticDeviceForwarder) start() {
-	log.L.Infof("Starting device forwarder for %v", e.index())
+	slog.Info("Starting device forwarder", "index", e.index())
 	ticker := time.NewTicker(e.interval)
 
 	for {
 		select {
 		case <-ticker.C:
 			//send it off
-			log.L.Debugf("Sending bulk ELK update for %v", e.index())
+			slog.Debug("Sending bulk ELK update", "index", e.index())
 
 			go prepAndForward(e.index(), e.url, e.buffer)
 			e.buffer = make(map[string]elk.ElkBulkUpdateItem)
@@ -142,14 +142,14 @@ func (e *ElkStaticDeviceForwarder) start() {
 }
 
 func (e *ElkStaticRoomForwarder) start() {
-	log.L.Infof("Starting room forwarder for %v", e.index())
+	slog.Info("Starting room forwarder", "index", e.index())
 	ticker := time.NewTicker(e.interval)
 
 	for {
 		select {
 		case <-ticker.C:
 			//send it off
-			log.L.Debugf("Sending bulk ELK update for %v", e.index())
+			slog.Debug("Sending bulk ELK update", "index", e.index())
 
 			go prepAndForward(e.index(), e.url, e.buffer)
 			e.buffer = make(map[string]elk.ElkBulkUpdateItem)

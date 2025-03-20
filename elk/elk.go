@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
 )
 
@@ -60,11 +60,11 @@ type BulkUpdateResponse struct {
 
 // MakeGenericELKRequest .
 func MakeGenericELKRequest(addr, method string, body interface{}, user, pass string) ([]byte, *nerr.E) {
-	log.L.Debugf("Making ELK request against: %s", addr)
+	slog.Debug("Making ELK request", "addr", addr)
 
 	if len(user) == 0 || len(pass) == 0 {
 		if len(username) == 0 || len(password) == 0 {
-			log.L.Fatalf("ELK_SA_USERNAME, or ELK_SA_PASSWORD is not set.")
+			slog.Error("ELK_SA_USERNAME or ELK_SA_PASSWORD is not set")
 		}
 	}
 
@@ -82,7 +82,6 @@ func MakeGenericELKRequest(addr, method string, body interface{}, user, pass str
 			return []byte{}, nerr.Translate(err)
 		}
 	}
-	//	log.L.Debugf("Body: %s", reqBody)
 
 	// create the request
 	req, err := http.NewRequest(method, addr, bytes.NewReader(reqBody))
@@ -120,18 +119,17 @@ func MakeGenericELKRequest(addr, method string, body interface{}, user, pass str
 
 	// check resp code
 	if resp.StatusCode/100 != 2 {
-		msg := fmt.Sprintf("non 200 reponse code received. code: %v, body: %s", resp.StatusCode, respBody)
+		msg := fmt.Sprintf("non 200 response code received. code: %v, body: %s", resp.StatusCode, respBody)
 		return respBody, nerr.Create(msg, http.StatusText(resp.StatusCode))
 	}
 
 	return respBody, nil
-
 }
 
 // MakeELKRequest .
 func MakeELKRequest(method, endpoint string, body interface{}) ([]byte, *nerr.E) {
 	if len(APIAddr) == 0 {
-		log.L.Fatalf("ELK_DIRECT_ADDRESS is not set.")
+		slog.Error("ELK_DIRECT_ADDRESS is not set")
 	}
 
 	// format whole address
@@ -145,25 +143,19 @@ func BulkForward(caller, url, user, pass string, toSend []ElkBulkUpdateItem) {
 	if len(toSend) == 0 {
 		return
 	}
-	log.L.Infof("%v Sending bulk upsert for %v items.", caller, len(toSend))
-	//DEBUG
-	/*
-		for i := range toSend {
-			log.L.Debugf("%+v", toSend[i])
-		}
-	*/
+	slog.Info("Sending bulk upsert", "caller", caller, "items", len(toSend))
 
-	log.L.Debugf("%v Building payload", caller)
-	//build our payload
+	slog.Debug("Building payload", "caller", caller)
+	// build our payload
 	payload := []byte{}
 	for i := range toSend {
 		var headerbytes []byte
 		var err error
 
-		if len(toSend[i].Delete.Header.Index) > 0 { //it's a delete
+		if len(toSend[i].Delete.Header.Index) > 0 { // it's a delete
 			headerbytes, err = json.Marshal(toSend[i].Delete)
 			if err != nil {
-				log.L.Errorf("%v Couldn't marshal header for elk event bulk update: %v", caller, toSend[i])
+				slog.Error("Couldn't marshal header for elk event bulk update", "caller", caller, "item", toSend[i])
 				continue
 			}
 			payload = append(payload, headerbytes...)
@@ -172,39 +164,33 @@ func BulkForward(caller, url, user, pass string, toSend []ElkBulkUpdateItem) {
 		} else { // do our base case
 			headerbytes, err = json.Marshal(toSend[i].Index)
 			if err != nil {
-				log.L.Errorf("%v Couldn't marshal header for elk event bulk update: %v", caller, toSend[i])
+				slog.Error("Couldn't marshal header for elk event bulk update", "caller", caller, "item", toSend[i])
 				continue
 			}
 
 			bodybytes, err := json.Marshal(toSend[i].Doc)
 			if err != nil {
-				log.L.Errorf("%v Couldn't marshal header for elk event bulk update: %v", caller, toSend[i])
+				slog.Error("Couldn't marshal body for elk event bulk update", "caller", caller, "item", toSend[i])
 				continue
 			}
 			payload = append(payload, headerbytes...)
 			payload = append(payload, '\n')
 			payload = append(payload, bodybytes...)
 			payload = append(payload, '\n')
-
 		}
 	}
 
 	payload = append(payload, '\n') // Ensure the final newline
 
-	//once our payload is built
-	log.L.Debugf("%v Payload built, sending...", caller)
-	//log.L.Debugf("%s", payload)
+	// once our payload is built
+	slog.Debug("Payload built, sending...", "caller", caller)
 
-	url = strings.Trim(url, "/")         //remove any trailing slash so we can append it again
-	addr := fmt.Sprintf("%v/_bulk", url) //make the addr
-
-	url = strings.Trim(url, "/")
-	addr = fmt.Sprintf("%v/_bulk", url)
+	url = strings.Trim(url, "/")         // remove any trailing slash so we can append it again
+	addr := fmt.Sprintf("%v/_bulk", url) // make the addr
 
 	resp, er := MakeGenericELKRequest(addr, "POST", payload, user, pass)
 	if er != nil {
-
-		log.L.Errorf("%v Couldn't send bulk update. error %v", caller, er.Error())
+		slog.Error("Couldn't send bulk update", "caller", caller, "error", er.Error())
 		return
 	}
 
@@ -212,12 +198,12 @@ func BulkForward(caller, url, user, pass string, toSend []ElkBulkUpdateItem) {
 
 	err := json.Unmarshal(resp, &elkresp)
 	if err != nil {
-		log.L.Errorf("%v Unknown response received from ELK in response to bulk update: %s", caller, resp)
+		slog.Error("Unknown response received from ELK in response to bulk update", "caller", caller, "response", string(resp))
 		return
 	}
 	if elkresp.Errors {
-		log.L.Errorf("%v Errors received from ELK during bulk update %s", caller, resp)
+		slog.Error("Errors received from ELK during bulk update", "caller", caller, "response", string(resp))
 		return
 	}
-	log.L.Debugf("%v Successfully sent bulk ELK updates", caller)
+	slog.Debug("Successfully sent bulk ELK updates", "caller", caller)
 }

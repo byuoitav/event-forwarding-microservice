@@ -2,10 +2,10 @@ package shared
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
-	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
 	sd "github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/common/v2/events"
@@ -78,7 +78,7 @@ func GetNewDevice(id string) (sd.StaticDevice, *nerr.E) {
 
 	rm := strings.Split(id, "-")
 	if len(rm) != 3 {
-		log.L.Errorf("Invalid Device %v", id)
+		slog.Error("Invalid Device", "id", id)
 		return sd.StaticDevice{}, nerr.Create(fmt.Sprintf("Can't build device manager: invalid ID %v", id), "invalid-id")
 	}
 

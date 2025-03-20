@@ -2,10 +2,10 @@ package shared
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
-	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
 	sd "github.com/byuoitav/common/state/statedefinition"
 )
@@ -15,7 +15,7 @@ func GetNewRoom(id string) (sd.StaticRoom, *nerr.E) {
 
 	rm := strings.Split(id, "-")
 	if len(rm) != 2 {
-		log.L.Errorf("Invalid Room %v", id)
+		slog.Error("Invalid Room", "id", id)
 		return sd.StaticRoom{}, nerr.Create(fmt.Sprintf("Can't build device manager: invalid ID %v", id), "invalid-id")
 	}
 

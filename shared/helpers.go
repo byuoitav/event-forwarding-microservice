@@ -3,13 +3,13 @@ package shared
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"regexp"
 	"strings"
 	"time"
 	"unicode"
 
-	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
 	sd "github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/common/v2/events"
@@ -31,7 +31,7 @@ func init() {
 func updateHeartbeat(v events.Event) {
 	split := strings.Split(v.GeneratingSystem, "-")
 	if len(split) < 3 {
-		log.L.Debugf("invalid generating system: invalid-arguments")
+		slog.Debug("invalid generating system: invalid-arguments")
 		return
 	}
 	heartbeatEvent := events.Event{
@@ -46,7 +46,7 @@ func updateHeartbeat(v events.Event) {
 	}
 	_, err := ForwardAndStoreEvent(heartbeatEvent)
 	if err != nil {
-		log.L.Debugf("unable to create heartbeat event: %v", err.Error())
+		slog.Debug("unable to create heartbeat event", "error", err.Error())
 	}
 }
 
@@ -56,16 +56,15 @@ func ForwardAndStoreEvent(v events.Event) (bool, *nerr.E) {
 		// Try if we can
 		updateHeartbeat(v)
 	}
-	//Forward All if they are not "fake" heartbeats
+	// Forward All if they are not "fake" heartbeats
 	if v.Key != "auto-heartbeat" {
 		list := forwarding.GetManagersForType(config.EVENT, config.ALL)
 		for i := range list {
-			//log.L.Debugf("Going to event forwarder: %v", list[i])
 			list[i].Send(v)
 		}
 	}
 
-	//if it's an doesn't correspond to core or detail state we don't want to store it.
+	// if it doesn't correspond to core or detail state we don't want to store it.
 	if !events.ContainsAnyTags(v, events.CoreState, events.DetailState, events.Heartbeat) {
 		return false, nil
 	}
@@ -114,13 +113,13 @@ NOTE: If in the code you can formulate a separate StaticDevice and compare it, d
 */
 func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.StaticDevice) (bool, sd.StaticDevice, *nerr.E) {
 	val := reflect.TypeOf(t)
-	log.L.Debugf("Kind: %v", val.Kind())
+	slog.Debug("Kind", "kind", val.Kind())
 
-	//check the update times case to see if we even need to proceed.
+	// check the update times case to see if we even need to proceed.
 	v, ok := t.UpdateTimes[key]
 	if ok {
-		if v.After(updateTime) { //the current update is more recent
-			log.L.Infof("Discarding update %v:%v for device %v as we have a more recent update", key, value, t.DeviceID)
+		if v.After(updateTime) { // the current update is more recent
+			slog.Info("Discarding update for device as we have a more recent update", "key", key, "value", value, "device", t.DeviceID)
 			return false, t, nil
 		}
 	}
@@ -141,7 +140,7 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 			t.Alerts = make(map[string]sd.Alert)
 		}
 
-		//take just the name following the '.' value
+		// take just the name following the '.' value
 		s := strings.Split(key, ".")
 
 		t.Alerts[s[1]] = v
@@ -150,7 +149,7 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 
 	var strvalue string
 
-	//we translate to a string as this is the default use (events coming from individual room's event systems), and it makes the rest of the code cleaner.
+	// we translate to a string as this is the default use (events coming from individual room's event systems), and it makes the rest of the code cleaner.
 	switch value.(type) {
 	case int:
 		strvalue = fmt.Sprintf("%v", value)
@@ -177,21 +176,20 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 
 	for i := 0; i < val.NumField(); i++ {
 		cur := val.Field(i)
-		//log.L.Debugf("curType: %+v", cur)
 		jsonTag := cur.Tag.Get("json")
 
-		jsonTag = strings.Split(jsonTag, ",")[0] //remove the 'omitempty' if any
+		jsonTag = strings.Split(jsonTag, ",")[0] // remove the 'omitempty' if any
 		if jsonTag == key {
-			log.L.Debugf("Found: %+v", strvalue)
+			slog.Debug("Found", "key", key, "value", strvalue)
 		} else {
 			continue
 		}
 
 		curval := reflect.ValueOf(&t).Elem().Field(i)
-		log.L.Debugf("Type: %v", curval.Type())
+		slog.Debug("Type", "type", curval.Type())
 
 		if curval.CanSet() {
-			//check for nil UpdateTimes map
+			// check for nil UpdateTimes map
 			if t.UpdateTimes == nil {
 				t.UpdateTimes = make(map[string]time.Time)
 			}
@@ -199,113 +197,113 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 			thistype := curval.Type()
 			switch thistype {
 			case stringtype:
-				log.L.Debugf("string")
+				slog.Debug("string")
 				var a string
 				err := json.Unmarshal([]byte("\""+strvalue+"\""), &a)
 				if err != nil {
-					log.L.Debugf("ERROR: %v", err.Error())
+					slog.Debug("ERROR", "error", err.Error())
 					return false, t, nerr.Translate(err).Addf("Couldn't unmarshal strvalue %v into the field %v.", strvalue, key)
 				}
 
-				//update the time that it was 'last' set
+				// update the time that it was 'last' set
 				t.UpdateTimes[key] = updateTime
 
 				prevValue := curval.Interface().(string)
 
-				log.L.Debugf("PrevValue: %v, curValue: %v", prevValue, a)
+				slog.Debug("PrevValue", "prevValue", prevValue, "curValue", a)
 
 				if a == prevValue {
-					//no change
+					// no change
 					return false, t, nil
 				}
 
-				//set it
+				// set it
 				curval.SetString(a)
 				return true, t, nil
 
 			case timetype:
-				log.L.Debugf("time")
+				slog.Debug("time")
 				var a time.Time
 				err := json.Unmarshal([]byte(strvalue), &a)
 				if err != nil {
 					return false, t, nerr.Translate(err).Addf("Couldn't unmarshal strvalue %v into the field %v.", strvalue, key)
 				}
 
-				//update the time that it was 'last' set
+				// update the time that it was 'last' set
 				t.UpdateTimes[key] = updateTime
 
 				prevValue := curval.Interface().(time.Time)
 				if prevValue.Equal(a) {
-					//no change
+					// no change
 					return false, t, nil
 				}
 
-				//set it
+				// set it
 				curval.Set(reflect.ValueOf(a))
 				return true, t, nil
 
 			case booltype:
-				log.L.Debugf("bool")
+				slog.Debug("bool")
 				var a bool
 				err := json.Unmarshal([]byte(strvalue), &a)
 				if err != nil {
 					return false, t, nerr.Translate(err).Addf("Couldn't unmarshal strvalue %v into the field %v.", strvalue, key)
 				}
 
-				//update the time that it was 'last' set
+				// update the time that it was 'last' set
 				t.UpdateTimes[key] = updateTime
 
 				prevValue := curval.Interface().(*bool)
 				if prevValue != nil && *prevValue == a {
-					//no change
+					// no change
 					return false, t, nil
 				}
 
-				//set it
+				// set it
 				curval.Set(reflect.ValueOf(&a))
 				return true, t, nil
 
 			case inttype:
-				log.L.Debugf("int")
+				slog.Debug("int")
 				var a int
 				err := json.Unmarshal([]byte(strvalue), &a)
 				if err != nil {
-					log.L.Warnf("%+v", err)
+					slog.Warn("Error unmarshaling int", "error", err)
 					return false, t, nerr.Translate(err).Addf("Couldn't unmarshal strvalue %v into the field %v.", strvalue, key)
 				}
 
-				//update the time that it was 'last' set
+				// update the time that it was 'last' set
 				t.UpdateTimes[key] = updateTime
 
 				prevValue := curval.Interface().(*int)
 				if prevValue != nil && *prevValue == a {
-					//no change
+					// no change
 					return false, t, nil
 				}
 
-				//set it
+				// set it
 				curval.Set(reflect.ValueOf(&a))
 
 				return true, t, nil
 			case float64type:
-				log.L.Debugf("float64")
+				slog.Debug("float64")
 				var a float64
 				err := json.Unmarshal([]byte(strvalue), &a)
 				if err != nil {
-					log.L.Warnf("%+v", err)
+					slog.Warn("Error unmarshaling float64", "error", err)
 					return false, t, nerr.Translate(err).Addf("Couldn't unmarshal strvalue %v into the field %v.", strvalue, key)
 				}
 
-				//update the time that it was 'last' set
+				// update the time that it was 'last' set
 				t.UpdateTimes[key] = updateTime
 
 				prevValue := curval.Interface().(*float64)
 				if prevValue != nil && *prevValue == a {
-					//no change
+					// no change
 					return false, t, nil
 				}
 
-				//set it
+				// set it
 				curval.Set(reflect.ValueOf(&a))
 
 				return true, t, nil
@@ -318,7 +316,7 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 		}
 	}
 
-	//if we made it here, it means that the field isn't found
+	// if we made it here, it means that the field isn't found
 	return false, t, nerr.Create(fmt.Sprintf("Field %v isn't a valid field for a device.", key), "field-error")
 }
 
@@ -357,7 +355,7 @@ var translationMap = map[string]string{
 	"TECLITE": "tec-lite",
 	"CUSTOM":  "custom",
 	"SD":      "tec-sd",
-	"DEV":     "development-flag", //fake device type for testing purposes
+	"DEV":     "development-flag", // fake device type for testing purposes
 }
 
 // GetDeviceTypeByID .
@@ -365,7 +363,7 @@ func GetDeviceTypeByID(id string) string {
 
 	split := strings.Split(id, "-")
 	if len(split) != 3 {
-		log.L.Warnf("[dispatcher] Invalid hostname for device: %v", id)
+		slog.Warn("[dispatcher] Invalid hostname for device", "id", id)
 		return ""
 	}
 
@@ -373,13 +371,13 @@ func GetDeviceTypeByID(id string) string {
 		if unicode.IsDigit(char) {
 			val, ok := translationMap[split[2][:pos]]
 			if !ok {
-				log.L.Warnf("Invalid device type: %v", split[2][:pos])
+				slog.Warn("Invalid device type", "type", split[2][:pos])
 				return "unknown"
 			}
 			return val
 		}
 	}
 
-	log.L.Warnf("no valid translation for: %v", split[2])
+	slog.Warn("no valid translation", "value", split[2])
 	return ""
 }

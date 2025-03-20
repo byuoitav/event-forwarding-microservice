@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log/slog"
 	"net/http"
 	"os"
 	"sync"
 
-	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
 )
 
@@ -20,16 +20,16 @@ var (
 )
 
 func initialize() {
-	log.L.Info("Initializing couch requests")
+	slog.Info("Initializing couch requests")
 	username = os.Getenv("DB_USERNAME")
 	password = os.Getenv("DB_PASSWORD")
 }
 
-//MakeRequest makes a generic Couch Request
+// MakeRequest makes a generic Couch Request
 func MakeRequest(addr, method string, body interface{}) ([]byte, *nerr.E) {
 	once.Do(initialize)
 
-	log.L.Debugf("Making couch request against: %s", addr)
+	slog.Debug("Making couch request", "addr", addr)
 
 	var reqBody []byte
 	var err error
@@ -76,10 +76,10 @@ func MakeRequest(addr, method string, body interface{}) ([]byte, *nerr.E) {
 
 	// check resp code
 	if resp.StatusCode/100 != 2 {
-		msg := fmt.Sprintf("non 200 reponse code received. code: %v, body: %s", resp.StatusCode, respBody)
+		msg := fmt.Sprintf("non 200 response code received. code: %v, body: %s", resp.StatusCode, respBody)
+		slog.Error(msg, "statusCode", resp.StatusCode, "body", string(respBody))
 		return respBody, nerr.Create(msg, http.StatusText(resp.StatusCode))
 	}
 
 	return respBody, nil
-
 }

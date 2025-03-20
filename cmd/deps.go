@@ -3,20 +3,22 @@ package main
 import (
 	"fmt"
 	"log/slog"
+	"strings"
 )
 
 func stringToLogLevel(lvl string) (slog.Level, error) {
+	lvl = strings.ToLower(lvl)
 	switch lvl {
-	case "Info":
+	case "info":
 		slog.Debug("Setting level to Info")
 		return slog.LevelInfo, nil
-	case "Debug":
+	case "debug":
 		slog.Debug("Setting level to Debug")
 		return slog.LevelDebug, nil
-	case "Warn":
+	case "warn":
 		slog.Debug("Setting level to Warn")
 		return slog.LevelWarn, nil
-	case "Error":
+	case "error":
 		slog.Debug("Setting level to Error")
 		return slog.LevelError, nil
 	default:

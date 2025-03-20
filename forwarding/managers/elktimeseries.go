@@ -1,9 +1,9 @@
 package managers
 
 import (
+	"log/slog"
 	"time"
 
-	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
 	"github.com/byuoitav/common/v2/events"
 	"github.com/byuoitav/event-forwarding-microservice/elk"
@@ -55,14 +55,14 @@ func (e *ElkTimeseriesForwarder) Send(toSend interface{}) error {
 // starts the manager and buffer.
 func (e *ElkTimeseriesForwarder) start() {
 
-	log.L.Infof("Starting event forwarder for %v", e.index())
+	slog.Info("Starting event forwarder", "index", e.index())
 	ticker := time.NewTicker(e.interval)
 
 	for {
 		select {
 		case <-ticker.C:
 			//send it off
-			log.L.Debugf("Sending bulk ELK update for %v", e.index())
+			slog.Debug("Sending bulk ELK update", "index", e.index())
 
 			go elk.BulkForward(e.index(), e.url, "", "", e.buffer)
 			e.buffer = []elk.ElkBulkUpdateItem{}

@@ -6,12 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
 
 	"github.com/byuoitav/common/db/couch"
-	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
 )
 
@@ -45,7 +45,7 @@ func UpdateConfigFiles(ctx context.Context, db string) *nerr.E {
 	}
 
 	url := fmt.Sprintf("%s/%s/_find", strings.Trim(addr, "/"), db)
-	log.L.Infof("Updating config files from %s", url)
+	slog.Info("Updating config files", "url", url)
 
 	query := []byte(`{
 	"selector": {
@@ -120,7 +120,7 @@ func WriteFilesToDisk(configs []ConfigFile) *nerr.E {
 			continue
 		}
 
-		log.L.Infof("Writing new config file to %s", path)
+		slog.Info("Writing new config file", "path", path)
 
 		// create dirs in case they don't exist
 		err := os.MkdirAll(config.Path, 0775)
