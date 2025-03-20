@@ -10,8 +10,6 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	"github.com/byuoitav/common/nerr"
 )
 
 // CONST
@@ -59,7 +57,7 @@ type BulkUpdateResponse struct {
 }
 
 // MakeGenericELKRequest .
-func MakeGenericELKRequest(addr, method string, body interface{}, user, pass string) ([]byte, *nerr.E) {
+func MakeGenericELKRequest(addr, method string, body interface{}, user, pass string) ([]byte, error) {
 	slog.Debug("Making ELK request", "addr", addr)
 
 	if len(user) == 0 || len(pass) == 0 {
@@ -79,14 +77,14 @@ func MakeGenericELKRequest(addr, method string, body interface{}, user, pass str
 		// marshal the request
 		reqBody, err = json.Marshal(v)
 		if err != nil {
-			return []byte{}, nerr.Translate(err)
+			return []byte{}, fmt.Errorf("failed to marshal request body: %w", err)
 		}
 	}
 
 	// create the request
 	req, err := http.NewRequest(method, addr, bytes.NewReader(reqBody))
 	if err != nil {
-		return []byte{}, nerr.Translate(err)
+		return []byte{}, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 
 	if len(user) == 0 || len(pass) == 0 {
@@ -107,27 +105,27 @@ func MakeGenericELKRequest(addr, method string, body interface{}, user, pass str
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return []byte{}, nerr.Translate(err)
+		return []byte{}, fmt.Errorf("failed to send HTTP request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	// read the resp
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return []byte{}, nerr.Translate(err)
+		return []byte{}, fmt.Errorf("failed to read response body: %w", err)
 	}
 
 	// check resp code
 	if resp.StatusCode/100 != 2 {
 		msg := fmt.Sprintf("non 200 response code received. code: %v, body: %s", resp.StatusCode, respBody)
-		return respBody, nerr.Create(msg, http.StatusText(resp.StatusCode))
+		return respBody, fmt.Errorf(msg)
 	}
 
 	return respBody, nil
 }
 
 // MakeELKRequest .
-func MakeELKRequest(method, endpoint string, body interface{}) ([]byte, *nerr.E) {
+func MakeELKRequest(method, endpoint string, body interface{}) ([]byte, error) {
 	if len(APIAddr) == 0 {
 		slog.Error("ELK_DIRECT_ADDRESS is not set")
 	}
@@ -188,15 +186,15 @@ func BulkForward(caller, url, user, pass string, toSend []ElkBulkUpdateItem) {
 	url = strings.Trim(url, "/")         // remove any trailing slash so we can append it again
 	addr := fmt.Sprintf("%v/_bulk", url) // make the addr
 
-	resp, er := MakeGenericELKRequest(addr, "POST", payload, user, pass)
-	if er != nil {
-		slog.Error("Couldn't send bulk update", "caller", caller, "error", er.Error())
+	resp, err := MakeGenericELKRequest(addr, "POST", payload, user, pass)
+	if err != nil {
+		slog.Error("Couldn't send bulk update", "caller", caller, "error", err.Error())
 		return
 	}
 
 	elkresp := BulkUpdateResponse{}
 
-	err := json.Unmarshal(resp, &elkresp)
+	err = json.Unmarshal(resp, &elkresp)
 	if err != nil {
 		slog.Error("Unknown response received from ELK in response to bulk update", "caller", caller, "response", string(resp))
 		return

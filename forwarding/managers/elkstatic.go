@@ -1,10 +1,10 @@
 package managers
 
 import (
+	"errors"
 	"log/slog"
 	"time"
 
-	"github.com/byuoitav/common/nerr"
 	sd "github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/event-forwarding-microservice/elk"
 )
@@ -63,7 +63,7 @@ func (e *ElkStaticDeviceForwarder) Send(toSend interface{}) error {
 	case sd.StaticDevice:
 		event = ev
 	default:
-		return nerr.Create("Invalid type to send via an Elk device Forwarder, must be a static device as defined in byuoitav/state-parser/state/statedefinition", "invalid-type")
+		return errors.New("invalid type to send via an Elk device Forwarder, must be a static device as defined in byuoitav/state-parser/state/statedefinition")
 	}
 
 	e.incomingChannel <- event
@@ -82,7 +82,7 @@ func (e *ElkStaticRoomForwarder) Send(toSend interface{}) error {
 	case sd.StaticRoom:
 		event = e
 	default:
-		return nerr.Create("Invalid type to send via an Elk device Forwarder, must be a static device as defined in byuoitav/state-parser/state/statedefinition", "invalid-type")
+		return errors.New("invalid type to send via an Elk device Forwarder, must be a static device as defined in byuoitav/state-parser/state/statedefinition")
 	}
 
 	e.incomingChannel <- event

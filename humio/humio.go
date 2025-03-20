@@ -4,14 +4,13 @@ package humio
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"os"
 	"time"
-
-	"github.com/byuoitav/common/nerr"
 )
 
 var (
@@ -19,7 +18,7 @@ var (
 )
 
 // sends a http request to humio using the given method, body, and authToken
-func MakeGenericHumioRequest(addr, method string, body interface{}, authToken string) ([]byte, *nerr.E) {
+func MakeGenericHumioRequest(addr, method string, body interface{}, authToken string) ([]byte, error) {
 	var reqBody []byte
 	var err error
 
@@ -31,14 +30,14 @@ func MakeGenericHumioRequest(addr, method string, body interface{}, authToken st
 		//marshal the request
 		reqBody, err = json.Marshal(v)
 		if err != nil {
-			return []byte{}, nerr.Translate(err)
+			return []byte{}, fmt.Errorf("failed to marshal request body: %w", err)
 		}
 	}
 
 	//create the request
 	req, err := http.NewRequest(method, addr, bytes.NewReader(reqBody))
 	if err != nil {
-		return []byte{}, nerr.Translate(err)
+		return []byte{}, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 
 	// add headers
@@ -56,26 +55,26 @@ func MakeGenericHumioRequest(addr, method string, body interface{}, authToken st
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return []byte{}, nerr.Translate(err)
+		return []byte{}, fmt.Errorf("failed to execute HTTP request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	//read the resp
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return []byte{}, nerr.Translate(err)
+		return []byte{}, fmt.Errorf("failed to read response body: %w", err)
 	}
 
 	if resp.StatusCode/100 != 2 {
-		msg := fmt.Sprintf("non 200 reponse code received. code: %v, body: %s", resp.StatusCode, respBody)
-		return respBody, nerr.Create(msg, http.StatusText(resp.StatusCode))
+		msg := fmt.Sprintf("non 200 response code received. code: %v, body: %s", resp.StatusCode, respBody)
+		return respBody, errors.New(msg)
 	}
 
 	return respBody, nil
 }
 
 // MakeHumioRequest sends an http request to humio using a direct address stored in the environment
-func MakeHumioRequest(method, endpoint string, body interface{}, authToken string) ([]byte, *nerr.E) {
+func MakeHumioRequest(method, endpoint string, body interface{}, authToken string) ([]byte, error) {
 	if len(APIAddr) == 0 {
 		slog.Error("HUMIO_DIRECT_ADDRESS is not set.")
 	}

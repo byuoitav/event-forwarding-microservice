@@ -9,8 +9,6 @@ import (
 	"net/http"
 	"os"
 	"sync"
-
-	"github.com/byuoitav/common/nerr"
 )
 
 var (
@@ -26,7 +24,7 @@ func initialize() {
 }
 
 // MakeRequest makes a generic Couch Request
-func MakeRequest(addr, method string, body interface{}) ([]byte, *nerr.E) {
+func MakeRequest(addr, method string, body interface{}) ([]byte, error) {
 	once.Do(initialize)
 
 	slog.Debug("Making couch request", "addr", addr)
@@ -42,14 +40,14 @@ func MakeRequest(addr, method string, body interface{}) ([]byte, *nerr.E) {
 		// marshal the request
 		reqBody, err = json.Marshal(v)
 		if err != nil {
-			return []byte{}, nerr.Translate(err)
+			return nil, fmt.Errorf("failed to marshal request body: %w", err)
 		}
 	}
 
 	// create the request
 	req, err := http.NewRequest(method, addr, bytes.NewReader(reqBody))
 	if err != nil {
-		return []byte{}, nerr.Translate(err)
+		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 
 	// add auth
@@ -64,21 +62,21 @@ func MakeRequest(addr, method string, body interface{}) ([]byte, *nerr.E) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return []byte{}, nerr.Translate(err)
+		return nil, fmt.Errorf("failed to execute HTTP request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	// read the resp
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return []byte{}, nerr.Translate(err)
+		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
 	// check resp code
 	if resp.StatusCode/100 != 2 {
 		msg := fmt.Sprintf("non 200 response code received. code: %v, body: %s", resp.StatusCode, respBody)
 		slog.Error(msg, "statusCode", resp.StatusCode, "body", string(respBody))
-		return respBody, nerr.Create(msg, http.StatusText(resp.StatusCode))
+		return respBody, fmt.Errorf("HTTP error: %s", msg)
 	}
 
 	return respBody, nil

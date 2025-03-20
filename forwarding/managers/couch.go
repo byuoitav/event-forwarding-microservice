@@ -2,13 +2,12 @@ package managers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"strings"
 	"time"
 
-	"github.com/byuoitav/common/nerr"
 	sd "github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/event-forwarding-microservice/couch"
 )
@@ -58,12 +57,12 @@ type CouchDeviceBuffer struct {
 	couchaddr string
 }
 
-// Send fulfils the manager interface
+// Send fulfills the manager interface
 func (c *CouchDeviceBuffer) Send(toSend interface{}) error {
 
 	dev, ok := toSend.(sd.StaticDevice)
 	if !ok {
-		return nerr.Create("Invalid type, couch device buffer expects a StaticDevice", "invalid-type")
+		return errors.New("invalid type, couch device buffer expects a StaticDevice")
 	}
 
 	c.incomingChannel <- dev
@@ -193,10 +192,6 @@ func sendBulkDeviceUpdate(toSend map[string]CouchStaticDevice, returnChan chan<-
 		body,
 	)
 	if err != nil {
-		if err.Type == http.StatusText(417) {
-			//at least one device failed
-			slog.Warn("At least one document in the bulk update failed")
-		}
 		slog.Error("Bad response received from Couch", "error", err.Error())
 		return
 	}

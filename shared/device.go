@@ -1,25 +1,25 @@
 package shared
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
 	"time"
 
-	"github.com/byuoitav/common/nerr"
 	sd "github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/common/v2/events"
 )
 
 // EditDeviceFromEvent .
-func EditDeviceFromEvent(e sd.State, device sd.StaticDevice) (sd.StaticDevice, bool, *nerr.E) {
+func EditDeviceFromEvent(e sd.State, device sd.StaticDevice) (sd.StaticDevice, bool, error) {
 	var changes bool
-	var err *nerr.E
+	var err error
 
 	if HasTag(events.CoreState, e.Tags) {
 		if s, ok := e.Value.(string); ok {
 			if len(s) < 1 {
-				//blank value: we don't do anything with this
+				// blank value: we don't do anything with this
 				return device, false, nil
 			}
 		}
@@ -74,12 +74,12 @@ func EditDeviceFromEvent(e sd.State, device sd.StaticDevice) (sd.StaticDevice, b
 }
 
 // GetNewDevice .
-func GetNewDevice(id string) (sd.StaticDevice, *nerr.E) {
+func GetNewDevice(id string) (sd.StaticDevice, error) {
 
 	rm := strings.Split(id, "-")
 	if len(rm) != 3 {
 		slog.Error("Invalid Device", "id", id)
-		return sd.StaticDevice{}, nerr.Create(fmt.Sprintf("Can't build device manager: invalid ID %v", id), "invalid-id")
+		return sd.StaticDevice{}, errors.New(fmt.Sprintf("Can't build device manager: invalid ID %v", id))
 	}
 
 	device := sd.StaticDevice{

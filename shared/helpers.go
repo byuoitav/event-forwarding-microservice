@@ -2,6 +2,7 @@ package shared
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"reflect"
@@ -10,7 +11,6 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/byuoitav/common/nerr"
 	sd "github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/common/v2/events"
 	"github.com/byuoitav/event-forwarding-microservice/config"
@@ -51,7 +51,7 @@ func updateHeartbeat(v events.Event) {
 }
 
 // ForwardAndStoreEvent .
-func ForwardAndStoreEvent(v events.Event) (bool, *nerr.E) {
+func ForwardAndStoreEvent(v events.Event) (bool, error) {
 	if len(v.GeneratingSystem) > 0 && !events.ContainsAnyTags(v, events.Heartbeat) {
 		// Try if we can
 		updateHeartbeat(v)
@@ -73,7 +73,7 @@ func ForwardAndStoreEvent(v events.Event) (bool, *nerr.E) {
 }
 
 // ForwardRoom .
-func ForwardRoom(room sd.StaticRoom, changes bool) *nerr.E {
+func ForwardRoom(room sd.StaticRoom, changes bool) error {
 	list := forwarding.GetManagersForType(config.ROOM, config.ALL)
 	for i := range list {
 		list[i].Send(room)
@@ -89,7 +89,7 @@ func ForwardRoom(room sd.StaticRoom, changes bool) *nerr.E {
 }
 
 // ForwardDevice .
-func ForwardDevice(device sd.StaticDevice, changes bool) *nerr.E {
+func ForwardDevice(device sd.StaticDevice, changes bool) error {
 	list := forwarding.GetManagersForType(config.DEVICE, config.ALL)
 	for i := range list {
 		list[i].Send(device)
@@ -111,7 +111,7 @@ If passing in an alert, we assume that the value is a statdefinition.Alert.	Aler
 
 NOTE: If in the code you can formulate a separate StaticDevice and compare it, defer to that approach, as the performance gain is quite significant.
 */
-func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.StaticDevice) (bool, sd.StaticDevice, *nerr.E) {
+func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.StaticDevice) (bool, sd.StaticDevice, error) {
 	val := reflect.TypeOf(t)
 	slog.Debug("Kind", "kind", val.Kind())
 
@@ -133,7 +133,7 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 	if alertRegex.MatchString(key) {
 		v, ok := value.(sd.Alert)
 		if !ok {
-			return false, t, nerr.Create(fmt.Sprintf("Can't assign a non alert %v to alert value %v.", value, key), "format-error")
+			return false, t, fmt.Errorf("can't assign a non alert %v to alert value %v", value, key)
 		}
 
 		if t.Alerts == nil {
@@ -168,10 +168,9 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 	case string:
 		strvalue = value.(string)
 	case sd.Alert:
-		return false, t, nerr.Create(fmt.Sprintf("Unsupported type %v. Alerts may only be used in an alert field (alert.X", reflect.TypeOf(value)), "format-error")
+		return false, t, errors.New("unsupported type. Alerts may only be used in an alert field (alert.X)")
 	default:
-		return false, t, nerr.Create(fmt.Sprintf("Unsupported type %v.", reflect.TypeOf(value)), "format-error")
-
+		return false, t, fmt.Errorf("unsupported type %v", reflect.TypeOf(value))
 	}
 
 	for i := 0; i < val.NumField(); i++ {
@@ -202,7 +201,7 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 				err := json.Unmarshal([]byte("\""+strvalue+"\""), &a)
 				if err != nil {
 					slog.Debug("ERROR", "error", err.Error())
-					return false, t, nerr.Translate(err).Addf("Couldn't unmarshal strvalue %v into the field %v.", strvalue, key)
+					return false, t, fmt.Errorf("couldn't unmarshal strvalue %v into the field %v: %w", strvalue, key, err)
 				}
 
 				// update the time that it was 'last' set
@@ -226,7 +225,7 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 				var a time.Time
 				err := json.Unmarshal([]byte(strvalue), &a)
 				if err != nil {
-					return false, t, nerr.Translate(err).Addf("Couldn't unmarshal strvalue %v into the field %v.", strvalue, key)
+					return false, t, fmt.Errorf("couldn't unmarshal strvalue %v into the field %v: %w", strvalue, key, err)
 				}
 
 				// update the time that it was 'last' set
@@ -247,7 +246,7 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 				var a bool
 				err := json.Unmarshal([]byte(strvalue), &a)
 				if err != nil {
-					return false, t, nerr.Translate(err).Addf("Couldn't unmarshal strvalue %v into the field %v.", strvalue, key)
+					return false, t, fmt.Errorf("couldn't unmarshal strvalue %v into the field %v: %w", strvalue, key, err)
 				}
 
 				// update the time that it was 'last' set
@@ -269,7 +268,7 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 				err := json.Unmarshal([]byte(strvalue), &a)
 				if err != nil {
 					slog.Warn("Error unmarshaling int", "error", err)
-					return false, t, nerr.Translate(err).Addf("Couldn't unmarshal strvalue %v into the field %v.", strvalue, key)
+					return false, t, fmt.Errorf("couldn't unmarshal strvalue %v into the field %v: %w", strvalue, key, err)
 				}
 
 				// update the time that it was 'last' set
@@ -291,7 +290,7 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 				err := json.Unmarshal([]byte(strvalue), &a)
 				if err != nil {
 					slog.Warn("Error unmarshaling float64", "error", err)
-					return false, t, nerr.Translate(err).Addf("Couldn't unmarshal strvalue %v into the field %v.", strvalue, key)
+					return false, t, fmt.Errorf("couldn't unmarshal strvalue %v into the field %v: %w", strvalue, key, err)
 				}
 
 				// update the time that it was 'last' set
@@ -308,16 +307,16 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 
 				return true, t, nil
 			default:
-				return false, t, nerr.Create(fmt.Sprintf("Field %v is an unsupported type %v", key, thistype), "unknown-type")
+				return false, t, fmt.Errorf("field %v is an unsupported type %v", key, thistype)
 			}
 
 		} else {
-			return false, t, nerr.Create(fmt.Sprintf("There was a problem setting field %v, field is not settable", key), "field-error")
+			return false, t, fmt.Errorf("there was a problem setting field %v, field is not settable", key)
 		}
 	}
 
 	// if we made it here, it means that the field isn't found
-	return false, t, nerr.Create(fmt.Sprintf("Field %v isn't a valid field for a device.", key), "field-error")
+	return false, t, fmt.Errorf("field %v isn't a valid field for a device", key)
 }
 
 // HasTag .

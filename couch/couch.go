@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/byuoitav/common/db/couch"
-	"github.com/byuoitav/common/nerr"
 )
 
 // ConfigFile represents a generic config file for shipwright
@@ -32,16 +31,16 @@ type configFileQueryResponse struct {
 }
 
 // UpdateConfigFiles updates the config files on disk from couchdb, using database db
-func UpdateConfigFiles(ctx context.Context, db string) *nerr.E {
+func UpdateConfigFiles(ctx context.Context, db string) error {
 	errMsg := "unable to update config files"
 
 	if len(db) == 0 {
-		return nerr.Createf("", "%s: must pass a valid db name", errMsg)
+		return fmt.Errorf("%s: must pass a valid db name", errMsg)
 	}
 
 	addr := os.Getenv("DB_ADDRESS")
 	if len(addr) == 0 {
-		return nerr.Createf("", "%s: DB_ADDRESS is not set", errMsg)
+		return fmt.Errorf("%s: DB_ADDRESS is not set", errMsg)
 	}
 
 	url := fmt.Sprintf("%s/%s/_find", strings.Trim(addr, "/"), db)
@@ -58,7 +57,7 @@ func UpdateConfigFiles(ctx context.Context, db string) *nerr.E {
 	// build request
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(query))
 	if err != nil {
-		return nerr.Translate(err).Add(errMsg)
+		return fmt.Errorf("%s: %w", errMsg, err)
 	}
 
 	req = req.WithContext(ctx)
@@ -74,30 +73,30 @@ func UpdateConfigFiles(ctx context.Context, db string) *nerr.E {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nerr.Translate(err).Add(errMsg)
+		return fmt.Errorf("%s: %w", errMsg, err)
 	}
 	defer resp.Body.Close()
 
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nerr.Translate(err).Add(errMsg)
+		return fmt.Errorf("%s: %w", errMsg, err)
 	}
 
 	if resp.StatusCode/100 != 2 {
 		ce := couch.CouchError{}
 		err = json.Unmarshal(b, &ce)
 		if err != nil {
-			return nerr.Translate(err).Addf("%s: received a %d response from %s. body: %s", errMsg, resp.StatusCode, url, b)
+			return fmt.Errorf("%s: received a %d response from %s. body: %s", errMsg, resp.StatusCode, url, b)
 		}
 
-		return nerr.Createf(ce.Error, "%s: %+v", errMsg, ce)
+		return fmt.Errorf("%s: %+v", errMsg, ce)
 	}
 
 	// read the docs from the response
 	docs := configFileQueryResponse{}
 	err = json.Unmarshal(b, &docs)
 	if err != nil {
-		return nerr.Translate(err).Add(errMsg)
+		return fmt.Errorf("%s: %w", errMsg, err)
 	}
 
 	configs := []ConfigFile{}
@@ -111,7 +110,7 @@ func UpdateConfigFiles(ctx context.Context, db string) *nerr.E {
 }
 
 // WriteFilesToDisk writes each of the config files to disk
-func WriteFilesToDisk(configs []ConfigFile) *nerr.E {
+func WriteFilesToDisk(configs []ConfigFile) error {
 	for _, config := range configs {
 		path := strings.TrimRight(config.Path, "/")
 		path = path + "/" + config.ID
@@ -125,17 +124,17 @@ func WriteFilesToDisk(configs []ConfigFile) *nerr.E {
 		// create dirs in case they don't exist
 		err := os.MkdirAll(config.Path, 0775)
 		if err != nil {
-			return nerr.Translate(err).Addf("unable to write %s to disk", config.Path)
+			return fmt.Errorf("unable to write %s to disk: %w", config.Path, err)
 		}
 
 		f, err := os.Create(path)
 		if err != nil {
-			return nerr.Translate(err).Addf("unable to write %s to disk", config.Path)
+			return fmt.Errorf("unable to write %s to disk: %w", config.Path, err)
 		}
 
 		_, err = f.Write(config.File)
 		if err != nil {
-			return nerr.Translate(err).Addf("unable to write %s to disk", config.Path)
+			return fmt.Errorf("unable to write %s to disk: %w", config.Path, err)
 		}
 	}
 
