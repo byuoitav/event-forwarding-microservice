@@ -6,17 +6,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/byuoitav/common/nerr"
 	sd "github.com/byuoitav/common/state/statedefinition"
 )
 
 // GetNewRoom .
-func GetNewRoom(id string) (sd.StaticRoom, *nerr.E) {
+func GetNewRoom(id string) (sd.StaticRoom, error) {
 
 	rm := strings.Split(id, "-")
 	if len(rm) != 2 {
 		slog.Error("Invalid Room", "id", id)
-		return sd.StaticRoom{}, nerr.Create(fmt.Sprintf("Can't build device manager: invalid ID %v", id), "invalid-id")
+		return sd.StaticRoom{}, fmt.Errorf("can't build device manager: invalid ID %v", id)
 	}
 
 	room := sd.StaticRoom{
