@@ -21,6 +21,18 @@ The event-forwarding-microservice receives events from the central event hub and
         ]
 } 
 ```
+
+## Endpoints
+### Status
+* <mark>GET</mark> `/ping` - Check if the microservice is running
+* <mark>GET</mark> `/status` - Returns good if microservice is running
+
+### Logging
+* <mark>Get</mark> `/logLevel` - Get the current log level
+* <mark>Get</mark> `/logLevel/:level` - Set the log level to the specified level
+    * `debug`, `info`, `warn`, `error`
+
+
 ## Forwarder Options
 ### Humio
 ```
