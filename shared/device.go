@@ -8,7 +8,7 @@ import (
 	"time"
 
 	sd "github.com/byuoitav/common/state/statedefinition"
-	"github.com/byuoitav/common/v2/events"
+	"github.com/byuoitav/event-forwarding-microservice/events"
 )
 
 // EditDeviceFromEvent .

@@ -9,8 +9,10 @@ import (
 
 	"github.com/byuoitav/central-event-system/hub/base"
 	"github.com/byuoitav/central-event-system/messenger"
-	"github.com/byuoitav/common/v2/events"
+
+	"github.com/byuoitav/event-forwarding-microservice/events"
 	"github.com/byuoitav/event-forwarding-microservice/helpers"
+
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/pflag"
 )
@@ -44,7 +46,7 @@ func main() {
 		messenger.SubscribeToRooms("*")
 
 		for {
-			processEvent(messenger.ReceiveEvent())
+			processEvent(events.ConvertV2ToCommon(messenger.ReceiveEvent()))
 		}
 	}()
 

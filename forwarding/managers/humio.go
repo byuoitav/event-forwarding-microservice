@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/byuoitav/common/v2/events"
+	"github.com/byuoitav/event-forwarding-microservice/events"
 	"github.com/byuoitav/event-forwarding-microservice/humio"
 )
 

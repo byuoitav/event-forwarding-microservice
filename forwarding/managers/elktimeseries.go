@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/byuoitav/common/v2/events"
 	"github.com/byuoitav/event-forwarding-microservice/elk"
+	"github.com/byuoitav/event-forwarding-microservice/events"
 )
 
 // ElkTimeseriesForwarder NOT THREAD SAFE

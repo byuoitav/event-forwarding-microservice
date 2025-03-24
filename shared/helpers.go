@@ -12,8 +12,8 @@ import (
 	"unicode"
 
 	sd "github.com/byuoitav/common/state/statedefinition"
-	"github.com/byuoitav/common/v2/events"
 	"github.com/byuoitav/event-forwarding-microservice/config"
+	"github.com/byuoitav/event-forwarding-microservice/events"
 	"github.com/byuoitav/event-forwarding-microservice/forwarding"
 )
 
