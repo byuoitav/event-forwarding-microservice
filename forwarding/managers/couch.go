@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	sd "github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/event-forwarding-microservice/couch"
+	sd "github.com/byuoitav/event-forwarding-microservice/state/statedefinition"
 )
 
 // CouchStaticDevice is just an sd StaticDevice with an _id and a _rev

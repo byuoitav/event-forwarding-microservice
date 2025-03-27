@@ -1,8 +1,8 @@
 package elk
 
 import (
-	"github.com/byuoitav/common/state/statedefinition"
-	"github.com/byuoitav/common/structs"
+	"github.com/byuoitav/event-forwarding-microservice/state/statedefinition"
+	"github.com/byuoitav/event-forwarding-microservice/structs"
 )
 
 // UpdateHeader .

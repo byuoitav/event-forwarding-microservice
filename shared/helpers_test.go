@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	sd "github.com/byuoitav/common/state/statedefinition"
+	sd "github.com/byuoitav/event-forwarding-microservice/state/statedefinition"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -61,7 +61,7 @@ func TestSetDeviceField(t *testing.T) {
 	assert.Equal(t, true, update)
 	assert.Equal(t, new.Input, "123")
 
-	//non supported primatives and structs will fail, even in a string field.
+	//non supported primitives and structs will fail, even in a string field.
 	update, new, err = SetDeviceField("input", byte(0x1), time.Now(), new)
 	assert.NotNil(t, err)
 	assert.Equal(t, false, update)

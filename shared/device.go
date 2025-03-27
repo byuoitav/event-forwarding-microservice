@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	sd "github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/event-forwarding-microservice/events"
+	sd "github.com/byuoitav/event-forwarding-microservice/state/statedefinition"
 )
 
 // EditDeviceFromEvent .

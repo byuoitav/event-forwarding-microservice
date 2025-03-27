@@ -44,7 +44,7 @@ func (e *ElkTimeseriesForwarder) Send(toSend interface{}) error {
 	case events.Event:
 		event = e
 	default:
-		return errors.New("invalid type to send via an Elk Event Forwarder, must be an event from the byuoitav/common/events package")
+		return errors.New("invalid type to send via an Elk Event Forwarder, must be an event from the byuoitav/event-forwarding-microservice/events package")
 	}
 
 	e.incomingChannel <- event

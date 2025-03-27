@@ -11,10 +11,10 @@ import (
 	"time"
 	"unicode"
 
-	sd "github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/event-forwarding-microservice/config"
 	"github.com/byuoitav/event-forwarding-microservice/events"
 	"github.com/byuoitav/event-forwarding-microservice/forwarding"
+	sd "github.com/byuoitav/event-forwarding-microservice/state/statedefinition"
 )
 
 var alertRegex *regexp.Regexp
@@ -72,7 +72,7 @@ func ForwardAndStoreEvent(v events.Event) (bool, error) {
 	return !events.ContainsAnyTags(v, events.Heartbeat, events.HardwareInfo), nil
 }
 
-// ForwardRoom .
+// ForwardRoom
 func ForwardRoom(room sd.StaticRoom, changes bool) error {
 	list := forwarding.GetManagersForType(config.ROOM, config.ALL)
 	for i := range list {
@@ -88,7 +88,7 @@ func ForwardRoom(room sd.StaticRoom, changes bool) error {
 	return nil
 }
 
-// ForwardDevice .
+// ForwardDevice
 func ForwardDevice(device sd.StaticDevice, changes bool) error {
 	list := forwarding.GetManagersForType(config.DEVICE, config.ALL)
 	for i := range list {

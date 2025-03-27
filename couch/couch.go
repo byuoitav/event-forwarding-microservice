@@ -10,8 +10,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-
-	"github.com/byuoitav/common/db/couch"
 )
 
 // ConfigFile represents a generic config file for shipwright
@@ -19,6 +17,11 @@ type ConfigFile struct {
 	ID   string          `json:"_id"`
 	Path string          `json:"path"`
 	File json.RawMessage `json:"contents"`
+}
+
+type CouchError struct {
+	Error  string `json:"error"`
+	Reason string `json:"reason"`
 }
 
 type configFileQueryResponse struct {
@@ -83,7 +86,7 @@ func UpdateConfigFiles(ctx context.Context, db string) error {
 	}
 
 	if resp.StatusCode/100 != 2 {
-		ce := couch.CouchError{}
+		ce := CouchError{}
 		err = json.Unmarshal(b, &ce)
 		if err != nil {
 			return fmt.Errorf("%s: received a %d response from %s. body: %s", errMsg, resp.StatusCode, url, b)

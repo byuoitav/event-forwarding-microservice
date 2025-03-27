@@ -155,7 +155,9 @@ func ContainsAnyTags(e Event, tags ...string) bool {
 	return false
 }
 
-// This function allows the old v2 dependency event to be converted to this event. It is required because event-forwarding-microservice has a dependency on the central-event-system which uses the old v2 event format.
+// This function allows the old v2 dependency event to be converted to this event.
+// It is required because event-forwarding-microservice has a dependency on the central-event-system which uses the old v2 event format in common.
+// Depends on Common.
 func ConvertV2ToCommon(e v2.Event) Event {
 	targetDevice := BasicDeviceInfo{
 		BasicRoomInfo: BasicRoomInfo{

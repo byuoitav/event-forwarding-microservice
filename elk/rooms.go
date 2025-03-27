@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/byuoitav/common/state/statedefinition"
+	"github.com/byuoitav/event-forwarding-microservice/state/statedefinition"
 )
 
 type roomQueryResponse struct {

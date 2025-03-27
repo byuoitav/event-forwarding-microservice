@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	sd "github.com/byuoitav/common/state/statedefinition"
+	sd "github.com/byuoitav/event-forwarding-microservice/state/statedefinition"
 )
 
 // GetNewRoom .
