@@ -9,7 +9,7 @@ import (
 // IMPORTANT - if you add fields to this struct be sure to change the CompareDevices function
 // *************************
 type StaticDevice struct {
-	//common fields
+	// general fields
 	DeviceID                string           `json:"deviceID,omitempty"`
 	Alerting                *bool            `json:"alerting,omitempty"`
 	Alerts                  map[string]Alert `json:"alerts,omitempty"`
@@ -27,7 +27,7 @@ type StaticDevice struct {
 
 	Tags []string `json:"tags,omitempty"`
 
-	//semi-common fields LastHeartbeat time.Time `json:"last-heartbeat,omitempty"` LastUserInput time.Time `json:"last-user-input,omitempty"`
+	//semi-general fields LastHeartbeat time.Time `json:"last-heartbeat,omitempty"` LastUserInput time.Time `json:"last-user-input,omitempty"`
 	Power           string `json:"power,omitempty"`
 	Active          string `json:"active,omitempty"`
 	Secure          string `json:"secure,omitempty"`
@@ -104,7 +104,7 @@ func CompareDevices(base, new StaticDevice) (diff StaticDevice, merged StaticDev
 	//base is our base
 	merged = base
 
-	//common fields
+	// general fields
 	if new.UpdateTimes["deviceID"].After(base.UpdateTimes["deviceID"]) {
 		diff.DeviceID, merged.DeviceID, changes = compareString(base.DeviceID, new.DeviceID, changes)
 	}
@@ -140,7 +140,7 @@ func CompareDevices(base, new StaticDevice) (diff StaticDevice, merged StaticDev
 		diff.Tags, merged.Tags, changes = compareTags(base.Tags, new.Tags, changes)
 	}
 
-	//semi-common fields
+	//semi-general fields
 	if new.UpdateTimes["last-heartbeat"].After(base.UpdateTimes["last-heartbeat"]) {
 		diff.LastHeartbeat, merged.LastHeartbeat, changes = compareTime(base.LastHeartbeat, new.LastHeartbeat, changes)
 	}

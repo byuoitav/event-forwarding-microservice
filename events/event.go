@@ -44,7 +44,7 @@ type Event struct {
 	// Timestamp is the time the event took place
 	Timestamp time.Time `json:"timestamp"`
 
-	// EventTags is a collection of strings to give more information about what kind of event this is, used in routing and processing events. See the EventTags const delcaration for some common tags.
+	// EventTags is a collection of strings to give more information about what kind of event this is, used in routing and processing events. See the EventTags const declaration for some common tags.
 	EventTags []string `json:"event-tags"`
 
 	// TargetDevice is the device being affected by the event. e.g. a power on event, this would be the device powering on

@@ -27,7 +27,7 @@ type ElkStaticRoomForwarder struct {
 	buffer          map[string]elk.ElkBulkUpdateItem
 }
 
-// ElkStaticForwarder is the common stuff
+// ElkStaticForwarder is the general stuff
 type ElkStaticForwarder struct {
 	interval time.Duration //how often to send an update
 	url      string

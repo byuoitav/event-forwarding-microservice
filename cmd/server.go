@@ -46,6 +46,7 @@ func main() {
 		messenger.SubscribeToRooms("*")
 
 		for {
+			// the messenger comes from the central-event-system, which is dependent on /common/v2/events
 			processEvent(events.ConvertV2ToCommon(messenger.ReceiveEvent()))
 		}
 	}()
