@@ -159,6 +159,11 @@ func ContainsAnyTags(e Event, tags ...string) bool {
 // It is required because event-forwarding-microservice has a dependency on the central-event-system which uses the old v2 event format in common.
 // Depends on Common.
 func ConvertV2ToCommon(e v2.Event) Event {
+	// if data is a string, make it an object
+	if str, ok := e.Data.(string); ok {
+		e.Data = map[string]string{"value": str}
+	}
+
 	targetDevice := BasicDeviceInfo{
 		BasicRoomInfo: BasicRoomInfo{
 			BuildingID: e.TargetDevice.BuildingID,

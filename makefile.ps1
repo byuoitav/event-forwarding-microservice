@@ -65,16 +65,16 @@ function Build {
     # $location = Get-Location
     # Write-Output $location\deps
 
-    # if (Test-Path "cmd") {
-    #     Set-Location "cmd"
-    #     Write-Output "Entering \cmd"
+    if (Test-Path "cmd") {
+        Set-Location "cmd"
+        Write-Output "Entering \cmd"
     
         Write-Output "*****************************************"
         Write-Output "Building for linux-amd64"
         Set-Item -Path env:CGO_ENABLED -Value 0
         Set-Item -Path env:GOOS -Value "linux"
         Set-Item -Path env:GOARCH -Value "amd64"
-        Invoke-Expression "go build -v -o ./dist/${NAME}-amd64"
+        Invoke-Expression "go build -v -o ../dist/${NAME}-amd64"
 
 
         Write-Output "*****************************************"
@@ -82,14 +82,14 @@ function Build {
         Set-Item -Path env:CGO_ENABLED -Value 0
         Set-Item -Path env:GOOS -Value "linux"
         Set-Item -Path env:GOARCH -Value "arm"
-        Invoke-Expression "go build -v -o ./dist/${NAME}-arm"
+        Invoke-Expression "go build -v -o ../dist/${NAME}-arm"
 
         Write-Output "Build output is located in ./dist/."
         Set-Item -Path env:GOOS -Value "windows"
         Set-Item -Path env:GOARCH -Value "amd64"
 
-        # Invoke-Expression "cd .."
-    # }
+        Invoke-Expression "cd .."
+    }
 }
 
 function Cleanup {

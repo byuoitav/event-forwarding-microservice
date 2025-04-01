@@ -180,6 +180,8 @@ func BulkForward(caller, url, user, pass string, toSend []ElkBulkUpdateItem) {
 
 	payload = append(payload, '\n') // Ensure the final newline
 
+	slog.Debug("Payload built", "caller", caller, "payload", string(payload))
+
 	// once our payload is built
 	slog.Debug("Payload built, sending...", "caller", caller)
 
