@@ -3,7 +3,7 @@ $COMMAND = $args[0]
 $NAME = "event-forwarding-microservice"
 $OWNER = "byuoitav"
 $PKG = "github.com/$OWNER/$NAME"
-$DOCKER_URL = "docker.pkg.github.com"
+$DOCKER_URL = "ghcr.io"
 $DOCKER_PKG = "$DOCKER_URL/$OWNER/$NAME"
 
 Write-Output "PKG: $PKG"
@@ -203,7 +203,6 @@ elseif ($COMMAND -eq "Docker" ) {
     Deps
     Build
     DockerFunc
-    Cleanup
 }
 elseif ($COMMAND -eq "Deploy" ) {
     Cleanup
@@ -211,7 +210,6 @@ elseif ($COMMAND -eq "Deploy" ) {
     Build
     DockerFunc
     Deploy
-    Cleanup
 }
 else {
     Write-Output "Please include a valid command parameter"
