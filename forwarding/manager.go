@@ -3,10 +3,10 @@ package forwarding
 
 import (
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
-	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/event-forwarding-microservice/config"
 	"github.com/byuoitav/event-forwarding-microservice/forwarding/managers"
 )
@@ -16,24 +16,24 @@ type BufferManager interface {
 	Send(toSend interface{}) error
 }
 
-// Key is made up of the CacheName-DataType-EventType
+// Key is made up of the DataType-EventType
 // e.g. default-device-all or legacy-event-all
 var managerMap map[string][]BufferManager
 var managerInit sync.Once
 
 func initManagers() {
-	log.L.Infof("Initializing buffer managers")
+	slog.Info("Initializing buffer managers")
 
 	c := config.GetConfig()
 
 	managerMap = make(map[string][]BufferManager)
 	for _, i := range c.Forwarders {
-		curName := fmt.Sprintf(fmt.Sprintf("%v-%v-%v", i.CacheName, i.DataType, i.EventType))
+		curName := fmt.Sprintf(fmt.Sprintf("%v-%v", i.DataType, i.EventType))
 		switch i.Type {
 		case config.ELKSTATIC:
 			switch i.DataType {
 			case config.ROOM:
-				log.L.Infof("Initializing manager %v", curName)
+				slog.Info("Initializing manager", "name", curName)
 				managerMap[curName] = append(managerMap[curName], managers.GetDefaultElkStaticRoomForwarder(
 					i.Elk.URL,
 					GetIndexFunction(i.Elk.IndexPattern, i.Elk.IndexRotationInterval),
@@ -41,7 +41,7 @@ func initManagers() {
 					i.Elk.Upsert,
 				))
 			case config.DEVICE:
-				log.L.Infof("Initializing manager %v", curName)
+				slog.Info("Initializing manager", "name", curName)
 				managerMap[curName] = append(managerMap[curName], managers.GetDefaultElkStaticDeviceForwarder(
 					i.Elk.URL,
 					GetIndexFunction(i.Elk.IndexPattern, i.Elk.IndexRotationInterval),
@@ -50,25 +50,25 @@ func initManagers() {
 				))
 			}
 		case config.ELKTIMESERIES:
-			log.L.Infof("Initializing manager %v", curName)
+			slog.Info("Initializing manager", "name", curName)
 			managerMap[curName] = append(managerMap[curName], managers.GetDefaultElkTimeSeries(
 				i.Elk.URL,
 				GetIndexFunction(i.Elk.IndexPattern, i.Elk.IndexRotationInterval),
 				time.Duration(i.Interval)*time.Second,
 			))
 		case config.COUCH:
-			log.L.Infof("Initializing manager %v", curName)
+			slog.Info("Initializing manager", "name", curName)
 			managerMap[curName] = append(managerMap[curName], managers.GetDefaultCouchDeviceBuffer(
 				i.Couch.URL,
 				i.Couch.DatabaseName,
 				time.Duration(i.Interval)*time.Second,
 			))
 		case config.WEBSOCKET:
-			log.L.Infof("Initializing Websocket manager %v", curName)
+			slog.Info("Initializing Websocket manager", "name", curName)
 			managerMap[curName] = append(managerMap[curName], managers.GetDefaultWebsocketForwarder())
 
 		case config.HUMIO:
-			log.L.Infof("Initializing Humio manager %v", curName)
+			slog.Info("Initializing Humio manager", "name", curName)
 			managerMap[curName] = append(managerMap[curName], managers.GetDefaultHumioForwarder(
 				time.Duration(i.Humio.Interval)*time.Second,
 				i.Humio.BufferSize,
@@ -76,17 +76,17 @@ func initManagers() {
 			))
 		}
 	}
-	log.L.Infof("Buffer managers initialized")
+	slog.Info("Buffer managers initialized")
 }
 
 // GetManagersForType a
-func GetManagersForType(cacheName, dataType, eventType string) []BufferManager {
+func GetManagersForType(dataType, eventType string) []BufferManager {
 	managerInit.Do(initManagers)
 
-	log.L.Debugf("Getting %s managers for %v-%v", cacheName, dataType, eventType)
-	v, ok := managerMap[fmt.Sprintf("%s-%s-%s", cacheName, dataType, eventType)]
+	slog.Debug("Getting managers", "dataType", dataType, "eventType", eventType)
+	v, ok := managerMap[fmt.Sprintf("%s-%s", dataType, eventType)]
 	if !ok {
-		log.L.Debugf("Unknown manager type: %v", fmt.Sprintf("%s-%s-%s", cacheName, dataType, eventType))
+		slog.Debug("Unknown manager type", "type", fmt.Sprintf("%s-%s", dataType, eventType))
 		return []BufferManager{}
 	}
 	return v
@@ -119,7 +119,7 @@ func GetIndexFunction(indexPattern, rotationInterval string) func() string {
 
 		}
 	default:
-		log.L.Fatalf("Unknown interval %v for index %v", rotationInterval, indexPattern)
+		slog.Error("Unknown interval for index", "interval", rotationInterval, "index", indexPattern)
 	}
 	return func() string {
 		return indexPattern

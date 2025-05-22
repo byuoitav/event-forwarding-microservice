@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/byuoitav/common/nerr"
-	"github.com/byuoitav/common/state/statedefinition"
+	"github.com/byuoitav/event-forwarding-microservice/state/statedefinition"
 )
 
 type roomQueryResponse struct {
@@ -22,7 +21,6 @@ type roomQueryResponse struct {
 		MaxScore float64 `json:"max_score"`
 		Hits     []struct {
 			Index  string                     `json:"_index"`
-			Type   string                     `json:"_type"`
 			ID     string                     `json:"_id"`
 			Score  float64                    `json:"_score"`
 			Source statedefinition.StaticRoom `json:"_source"`
@@ -30,9 +28,9 @@ type roomQueryResponse struct {
 	} `json:"hits"`
 }
 
-//GetRoomsBulk .
-func GetRoomsBulk(rooms []string) ([]statedefinition.StaticRoom, *nerr.E) {
-	//assume that the rooms is the array of ID's
+// GetRoomsBulk .
+func GetRoomsBulk(rooms []string) ([]statedefinition.StaticRoom, error) {
+	// assume that the rooms is the array of ID's
 	query := IDQuery{}
 	query.Query.IDS.Type = "room"
 	query.Query.IDS.Values = rooms
@@ -40,14 +38,14 @@ func GetRoomsBulk(rooms []string) ([]statedefinition.StaticRoom, *nerr.E) {
 	endpoint := fmt.Sprintf("/%s/_search", "oit-av-static-rooms")
 	body, err := MakeGenericELKRequest("POST", endpoint, query, "", "")
 	if err != nil {
-		return []statedefinition.StaticRoom{}, err.Addf("failed to get rooms bulk")
+		return nil, fmt.Errorf("failed to get rooms bulk: %w", err)
 	}
 
-	//we have the body, unmarshal it
+	// we have the body, unmarshal it
 	rresp := roomQueryResponse{}
 	gerr := json.Unmarshal(body, &rresp)
-	if err != nil {
-		return []statedefinition.StaticRoom{}, nerr.Translate(gerr).Addf("failed to get rooms bulk")
+	if gerr != nil {
+		return nil, fmt.Errorf("failed to unmarshal response: %w", gerr)
 	}
 
 	toReturn := []statedefinition.StaticRoom{}

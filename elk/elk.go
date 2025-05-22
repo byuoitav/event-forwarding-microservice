@@ -5,13 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
 	"time"
-
-	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/common/nerr"
 )
 
 // CONST
@@ -49,7 +47,6 @@ type ElkUpdateHeader struct {
 // HeaderIndex .
 type HeaderIndex struct {
 	Index string `json:"_index"`
-	Type  string `json:"_type"`
 	ID    string `json:"_id,omitempty"`
 }
 
@@ -60,12 +57,12 @@ type BulkUpdateResponse struct {
 }
 
 // MakeGenericELKRequest .
-func MakeGenericELKRequest(addr, method string, body interface{}, user, pass string) ([]byte, *nerr.E) {
-	log.L.Debugf("Making ELK request against: %s", addr)
+func MakeGenericELKRequest(addr, method string, body interface{}, user, pass string) ([]byte, error) {
+	slog.Debug("Making ELK request", "addr", addr)
 
 	if len(user) == 0 || len(pass) == 0 {
 		if len(username) == 0 || len(password) == 0 {
-			log.L.Fatalf("ELK_SA_USERNAME, or ELK_SA_PASSWORD is not set.")
+			slog.Error("ELK_SA_USERNAME or ELK_SA_PASSWORD is not set")
 		}
 	}
 
@@ -80,15 +77,14 @@ func MakeGenericELKRequest(addr, method string, body interface{}, user, pass str
 		// marshal the request
 		reqBody, err = json.Marshal(v)
 		if err != nil {
-			return []byte{}, nerr.Translate(err)
+			return []byte{}, fmt.Errorf("failed to marshal request body: %w", err)
 		}
 	}
-	//	log.L.Debugf("Body: %s", reqBody)
 
 	// create the request
 	req, err := http.NewRequest(method, addr, bytes.NewReader(reqBody))
 	if err != nil {
-		return []byte{}, nerr.Translate(err)
+		return []byte{}, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 
 	if len(user) == 0 || len(pass) == 0 {
@@ -100,7 +96,7 @@ func MakeGenericELKRequest(addr, method string, body interface{}, user, pass str
 
 	// add headers
 	if method == http.MethodPost || method == http.MethodPut {
-		req.Header.Add("content-type", "application/json")
+		req.Header.Add("content-type", "application/x-ndjson")
 	}
 
 	client := http.Client{
@@ -109,30 +105,29 @@ func MakeGenericELKRequest(addr, method string, body interface{}, user, pass str
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return []byte{}, nerr.Translate(err)
+		return []byte{}, fmt.Errorf("failed to send HTTP request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	// read the resp
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return []byte{}, nerr.Translate(err)
+		return []byte{}, fmt.Errorf("failed to read response body: %w", err)
 	}
 
 	// check resp code
 	if resp.StatusCode/100 != 2 {
-		msg := fmt.Sprintf("non 200 reponse code received. code: %v, body: %s", resp.StatusCode, respBody)
-		return respBody, nerr.Create(msg, http.StatusText(resp.StatusCode))
+		msg := fmt.Sprintf("non 200 response code received. code: %v, body: %s", resp.StatusCode, respBody)
+		return respBody, fmt.Errorf(msg)
 	}
 
 	return respBody, nil
-
 }
 
 // MakeELKRequest .
-func MakeELKRequest(method, endpoint string, body interface{}) ([]byte, *nerr.E) {
+func MakeELKRequest(method, endpoint string, body interface{}) ([]byte, error) {
 	if len(APIAddr) == 0 {
-		log.L.Fatalf("ELK_DIRECT_ADDRESS is not set.")
+		slog.Error("ELK_DIRECT_ADDRESS is not set")
 	}
 
 	// format whole address
@@ -140,79 +135,122 @@ func MakeELKRequest(method, endpoint string, body interface{}) ([]byte, *nerr.E)
 	return MakeGenericELKRequest(addr, method, body, "", "")
 }
 
-// BulkForward preps a bulk request and forwards it.
-// Leave user and pass blank to use the env variables defined above.
 func BulkForward(caller, url, user, pass string, toSend []ElkBulkUpdateItem) {
 	if len(toSend) == 0 {
 		return
 	}
-	log.L.Infof("%v Sending bulk upsert for %v items.", caller, len(toSend))
-	//DEBUG
-	/*
-		for i := range toSend {
-			log.L.Debugf("%+v", toSend[i])
-		}
-	*/
+	slog.Info("Sending bulk upsert", "caller", caller, "items", len(toSend))
 
-	log.L.Debugf("%v Building payload", caller)
-	//build our payload
+	slog.Debug("Building payload", "caller", caller)
+	// build our payload
 	payload := []byte{}
 	for i := range toSend {
 		var headerbytes []byte
 		var err error
 
-		if len(toSend[i].Delete.Header.Index) > 0 { //it's a delete
+		// Validate document to prevent empty field names and bad "data" fields
+		if toSend[i].Doc != nil {
+			docJSON, err := json.Marshal(toSend[i].Doc)
+			if err != nil {
+				slog.Error("Couldn't marshal document for elk event bulk update", "caller", caller, "item", toSend[i])
+				continue
+			}
+
+			var docMap map[string]interface{}
+			if err := json.Unmarshal(docJSON, &docMap); err != nil {
+				slog.Error("Couldn't unmarshal document for elk event bulk update", "caller", caller, "item", toSend[i])
+				continue
+			}
+
+			// Fix 'data' field if necessary
+			if dataField, ok := docMap["data"]; ok {
+				switch dataField.(type) {
+				case []interface{}:
+					slog.Warn("Wrapping array-type 'data' field into an object", "caller", caller, "item", toSend[i])
+					docMap["data"] = map[string]interface{}{
+						"values": dataField,
+					}
+				case nil:
+					docMap["data"] = map[string]interface{}{}
+				}
+			}
+
+			// Marshal again to check for empty keys
+			docJSON, err = json.Marshal(docMap)
+			if err != nil {
+				slog.Error("Couldn't marshal fixed document for elk event bulk update", "caller", caller, "item", toSend[i])
+				continue
+			}
+
+			// Check and replace empty field names
+			if bytes.Contains(docJSON, []byte(`"":`)) || bytes.Contains(docJSON, []byte(`"": `)) {
+				slog.Warn("Auto-generating key for empty field names", "caller", caller, "item", toSend[i])
+				docJSON = bytes.Replace(docJSON, []byte(`"":`), []byte(`"AutoGenerated":`), -1)
+				docJSON = bytes.Replace(docJSON, []byte(`"": `), []byte(`"AutoGenerated": `), -1)
+			}
+
+			// Update the document back
+			var fixedDoc interface{}
+			if err := json.Unmarshal(docJSON, &fixedDoc); err != nil {
+				slog.Error("Couldn't unmarshal final fixed document", "caller", caller, "item", toSend[i])
+				continue
+			}
+			toSend[i].Doc = fixedDoc
+		}
+
+		if len(toSend[i].Delete.Header.Index) > 0 { // it's a delete
 			headerbytes, err = json.Marshal(toSend[i].Delete)
 			if err != nil {
-				log.L.Errorf("%v Couldn't marshal header for elk event bulk update: %v", caller, toSend[i])
+				slog.Error("Couldn't marshal delete header for elk event bulk update", "caller", caller, "item", toSend[i])
 				continue
 			}
 			payload = append(payload, headerbytes...)
 			payload = append(payload, '\n')
-
-		} else { // do our base case
+		} else { // it's an index
 			headerbytes, err = json.Marshal(toSend[i].Index)
 			if err != nil {
-				log.L.Errorf("%v Couldn't marshal header for elk event bulk update: %v", caller, toSend[i])
+				slog.Error("Couldn't marshal index header for elk event bulk update", "caller", caller, "item", toSend[i])
 				continue
 			}
 
 			bodybytes, err := json.Marshal(toSend[i].Doc)
 			if err != nil {
-				log.L.Errorf("%v Couldn't marshal header for elk event bulk update: %v", caller, toSend[i])
+				slog.Error("Couldn't marshal document body for elk event bulk update", "caller", caller, "item", toSend[i])
 				continue
 			}
 			payload = append(payload, headerbytes...)
 			payload = append(payload, '\n')
 			payload = append(payload, bodybytes...)
 			payload = append(payload, '\n')
-
 		}
 	}
 
-	//once our payload is built
-	log.L.Debugf("%v Payload built, sending...", caller)
-	//log.L.Debugf("%s", payload)
+	payload = append(payload, '\n') // Ensure the final newline
 
-	url = strings.Trim(url, "/")         //remove any trailing slash so we can append it again
-	addr := fmt.Sprintf("%v/_bulk", url) //make the addr
+	slog.Debug("Payload built", "caller", caller, "payload", string(payload))
 
-	resp, er := MakeGenericELKRequest(addr, "POST", payload, user, pass)
-	if er != nil {
-		log.L.Errorf("%v Couldn't send bulk update. error %v", caller, er.Error())
+	// Send the payload
+	slog.Debug("Payload built, sending...", "caller", caller)
+	url = strings.Trim(url, "/")
+	addr := fmt.Sprintf("%v/_bulk", url)
+
+	resp, err := MakeGenericELKRequest(addr, "POST", payload, user, pass)
+	if err != nil {
+		slog.Error("Couldn't send bulk update", "caller", caller, "error", err.Error())
 		return
 	}
 
 	elkresp := BulkUpdateResponse{}
-
-	err := json.Unmarshal(resp, &elkresp)
+	err = json.Unmarshal(resp, &elkresp)
 	if err != nil {
-		log.L.Errorf("%v Unknown response received from ELK in response to bulk update: %s", caller, resp)
+		slog.Error("Unknown response received from ELK in response to bulk update", "caller", caller, "response", string(resp))
 		return
 	}
+
 	if elkresp.Errors {
-		log.L.Errorf("%v Errors received from ELK during bulk update %s", caller, resp)
+		slog.Error("Errors received from ELK during bulk update", "caller", caller, "response", string(resp))
 		return
 	}
-	log.L.Debugf("%v Successfully sent bulk ELK updates", caller)
+
+	slog.Debug("Successfully sent bulk ELK updates", "caller", caller)
 }

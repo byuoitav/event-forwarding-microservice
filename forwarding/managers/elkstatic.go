@@ -1,15 +1,15 @@
 package managers
 
 import (
+	"errors"
+	"log/slog"
 	"time"
 
-	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/common/nerr"
-	sd "github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/event-forwarding-microservice/elk"
+	sd "github.com/byuoitav/event-forwarding-microservice/state/statedefinition"
 )
 
-//ElkStaticDeviceForwarder is for a device
+// ElkStaticDeviceForwarder is for a device
 type ElkStaticDeviceForwarder struct {
 	ElkStaticForwarder
 	update          bool
@@ -18,7 +18,7 @@ type ElkStaticDeviceForwarder struct {
 	buffer          map[string]elk.ElkBulkUpdateItem
 }
 
-//ElkStaticRoomForwarder is for rooms
+// ElkStaticRoomForwarder is for rooms
 type ElkStaticRoomForwarder struct {
 	ElkStaticForwarder
 	update          bool
@@ -27,14 +27,14 @@ type ElkStaticRoomForwarder struct {
 	buffer          map[string]elk.ElkBulkUpdateItem
 }
 
-//ElkStaticForwarder is the common stuff
+// ElkStaticForwarder is the general stuff
 type ElkStaticForwarder struct {
 	interval time.Duration //how often to send an update
 	url      string
 	index    func() string //function to get the indexA
 }
 
-//GetDefaultElkStaticDeviceForwarder returns a regular static device forwarder with a buffer size of 10000
+// GetDefaultElkStaticDeviceForwarder returns a regular static device forwarder with a buffer size of 10000
 func GetDefaultElkStaticDeviceForwarder(URL string, index func() string, interval time.Duration, update bool) *ElkStaticDeviceForwarder {
 	toReturn := &ElkStaticDeviceForwarder{
 		ElkStaticForwarder: ElkStaticForwarder{
@@ -52,7 +52,7 @@ func GetDefaultElkStaticDeviceForwarder(URL string, index func() string, interva
 	return toReturn
 }
 
-//Send takes a device and adds it to the buffer
+// Send takes a device and adds it to the buffer
 func (e *ElkStaticDeviceForwarder) Send(toSend interface{}) error {
 
 	var event sd.StaticDevice
@@ -63,7 +63,7 @@ func (e *ElkStaticDeviceForwarder) Send(toSend interface{}) error {
 	case sd.StaticDevice:
 		event = ev
 	default:
-		return nerr.Create("Invalid type to send via an Elk device Forwarder, must be a static device as defined in byuoitav/state-parser/state/statedefinition", "invalid-type")
+		return errors.New("invalid type to send via an Elk device Forwarder, must be a static device as defined in byuoitav/state-parser/state/statedefinition")
 	}
 
 	e.incomingChannel <- event
@@ -71,7 +71,7 @@ func (e *ElkStaticDeviceForwarder) Send(toSend interface{}) error {
 	return nil
 }
 
-//Send takes a room and adds it to the buffer
+// Send takes a room and adds it to the buffer
 func (e *ElkStaticRoomForwarder) Send(toSend interface{}) error {
 
 	var event sd.StaticRoom
@@ -82,7 +82,7 @@ func (e *ElkStaticRoomForwarder) Send(toSend interface{}) error {
 	case sd.StaticRoom:
 		event = e
 	default:
-		return nerr.Create("Invalid type to send via an Elk device Forwarder, must be a static device as defined in byuoitav/state-parser/state/statedefinition", "invalid-type")
+		return errors.New("invalid type to send via an Elk device Forwarder, must be a static device as defined in byuoitav/state-parser/state/statedefinition")
 	}
 
 	e.incomingChannel <- event
@@ -90,19 +90,19 @@ func (e *ElkStaticRoomForwarder) Send(toSend interface{}) error {
 	return nil
 }
 
-//Delete .
+// Delete .
 func (e *ElkStaticRoomForwarder) Delete(id string) error {
 	e.deleteChannel <- id
 	return nil
 }
 
-//Delete .
+// Delete .
 func (e *ElkStaticDeviceForwarder) Delete(id string) error {
 	e.deleteChannel <- id
 	return nil
 }
 
-//GetDefaultElkStaticRoomForwarder returns a regular static room forwarder with a buffer size of 10000
+// GetDefaultElkStaticRoomForwarder returns a regular static room forwarder with a buffer size of 10000
 func GetDefaultElkStaticRoomForwarder(URL string, index func() string, interval time.Duration, update bool) *ElkStaticRoomForwarder {
 	toReturn := &ElkStaticRoomForwarder{
 		ElkStaticForwarder: ElkStaticForwarder{
@@ -121,14 +121,14 @@ func GetDefaultElkStaticRoomForwarder(URL string, index func() string, interval 
 }
 
 func (e *ElkStaticDeviceForwarder) start() {
-	log.L.Infof("Starting device forwarder for %v", e.index())
+	slog.Info("Starting device forwarder", "index", e.index())
 	ticker := time.NewTicker(e.interval)
 
 	for {
 		select {
 		case <-ticker.C:
 			//send it off
-			log.L.Debugf("Sending bulk ELK update for %v", e.index())
+			slog.Debug("Sending bulk ELK update", "index", e.index())
 
 			go prepAndForward(e.index(), e.url, e.buffer)
 			e.buffer = make(map[string]elk.ElkBulkUpdateItem)
@@ -142,14 +142,14 @@ func (e *ElkStaticDeviceForwarder) start() {
 }
 
 func (e *ElkStaticRoomForwarder) start() {
-	log.L.Infof("Starting room forwarder for %v", e.index())
+	slog.Info("Starting room forwarder", "index", e.index())
 	ticker := time.NewTicker(e.interval)
 
 	for {
 		select {
 		case <-ticker.C:
 			//send it off
-			log.L.Debugf("Sending bulk ELK update for %v", e.index())
+			slog.Debug("Sending bulk ELK update", "index", e.index())
 
 			go prepAndForward(e.index(), e.url, e.buffer)
 			e.buffer = make(map[string]elk.ElkBulkUpdateItem)
@@ -172,7 +172,6 @@ func (e *ElkStaticDeviceForwarder) bufferevent(event sd.StaticDevice) {
 	if !ok {
 		Header := elk.HeaderIndex{
 			Index: e.index(),
-			Type:  "av-device",
 		}
 		if e.update {
 			Header.ID = event.DeviceID
@@ -196,7 +195,6 @@ func (e *ElkStaticDeviceForwarder) deleteRecord(id string) {
 
 	Header := elk.HeaderIndex{
 		Index: e.index(),
-		Type:  "av-device",
 		ID:    id,
 	}
 	e.buffer[id] = elk.ElkBulkUpdateItem{
@@ -211,7 +209,6 @@ func (e *ElkStaticRoomForwarder) deleteRecord(id string) {
 
 	Header := elk.HeaderIndex{
 		Index: e.index(),
-		Type:  "av-room",
 		ID:    id,
 	}
 	e.buffer[id] = elk.ElkBulkUpdateItem{
@@ -229,7 +226,6 @@ func (e *ElkStaticRoomForwarder) bufferevent(event sd.StaticRoom) {
 	if !ok {
 		Header := elk.HeaderIndex{
 			Index: e.index(),
-			Type:  "av-room",
 		}
 		if e.update {
 			Header.ID = event.RoomID

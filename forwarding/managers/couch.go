@@ -2,15 +2,14 @@ package managers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"net/http"
+	"log/slog"
 	"strings"
 	"time"
 
-	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/common/nerr"
-	sd "github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/event-forwarding-microservice/couch"
+	sd "github.com/byuoitav/event-forwarding-microservice/state/statedefinition"
 )
 
 // CouchStaticDevice is just an sd StaticDevice with an _id and a _rev
@@ -58,12 +57,12 @@ type CouchDeviceBuffer struct {
 	couchaddr string
 }
 
-// Send fulfils the manager interface
+// Send fulfills the manager interface
 func (c *CouchDeviceBuffer) Send(toSend interface{}) error {
 
 	dev, ok := toSend.(sd.StaticDevice)
 	if !ok {
-		return nerr.Create("Invalid type, couch device buffer expects a StaticDevice", "invalid-type")
+		return errors.New("invalid type, couch device buffer expects a StaticDevice")
 	}
 
 	c.incomingChannel <- dev
@@ -73,14 +72,14 @@ func (c *CouchDeviceBuffer) Send(toSend interface{}) error {
 
 func (c *CouchDeviceBuffer) start() {
 
-	log.L.Infof("Starting couch buffer for database", c.database)
+	slog.Info("Starting couch buffer for database", "database", c.database)
 	ticker := time.NewTicker(c.interval)
 
 	for {
 		select {
 		case <-ticker.C:
 			//send it off
-			log.L.Debugf("Sending bulk ELK update for %v", c.database)
+			slog.Debug("Sending bulk ELK update", "database", c.database)
 
 			//send the current one
 			sendBulkDeviceUpdate(c.curBuffer, c.revChannel, c.reingestionChannel, c.couchaddr, c.database)
@@ -89,11 +88,11 @@ func (c *CouchDeviceBuffer) start() {
 			c.curBuffer = make(map[string]CouchStaticDevice)
 
 		case dev := <-c.incomingChannel:
-			log.L.Debugf("%+v", dev)
+			slog.Debug("Received device", "device", dev)
 			c.buffer(dev)
 
 		case revs := <-c.revChannel:
-			log.L.Debugf("updating rev numbers")
+			slog.Debug("Updating revision numbers")
 			c.updateRevs(revs)
 		case redo := <-c.reingestionChannel:
 			//just dump it in, it's updated
@@ -175,10 +174,10 @@ type CouchBulkUpdateResponse struct {
 func sendBulkDeviceUpdate(toSend map[string]CouchStaticDevice, returnChan chan<- []Rev, reingestionChannel chan<- CouchStaticDevice, addr, database string) {
 
 	if len(toSend) < 1 {
-		log.L.Infof("%v/%v No devices to send, returning...", addr, database)
+		slog.Info("No devices to send, returning", "addr", addr, "database", database)
 		return
 	}
-	log.L.Infof("Sending bulk update to %v/%v", addr, database)
+	slog.Info("Sending bulk update", "addr", addr, "database", database)
 
 	//go through the map and create the CouchStaticUpdateBody
 	body := CouchStaticUpdateBody{}
@@ -193,11 +192,7 @@ func sendBulkDeviceUpdate(toSend map[string]CouchStaticDevice, returnChan chan<-
 		body,
 	)
 	if err != nil {
-		if err.Type == http.StatusText(417) {
-			//at least one device failed
-			log.L.Warnf("At least one document in the bulk update failed")
-		}
-		log.L.Errorf("Bad response recieved from Couch: %v", err.Error())
+		slog.Error("Bad response received from Couch", "error", err.Error())
 		return
 	}
 	//we unmarshal the response into the update respons
@@ -205,7 +200,7 @@ func sendBulkDeviceUpdate(toSend map[string]CouchStaticDevice, returnChan chan<-
 
 	er := json.Unmarshal(resp, &respArray)
 	if er != nil {
-		log.L.Errorf("Unknown response recieved Erorr: %v Response: %s", er.Error(), resp)
+		slog.Error("Unknown response received", "error", er.Error(), "response", string(resp))
 		return
 	}
 	toReturn := []Rev{}
@@ -220,11 +215,11 @@ func sendBulkDeviceUpdate(toSend map[string]CouchStaticDevice, returnChan chan<-
 		} else {
 			if cur.Error == "conflict" {
 				//we need to get the new revision, then dump it back up the reingestion channel
-				log.L.Warnf("Document update conflict for %v, rectifying", cur.ID)
+				slog.Warn("Document update conflict, rectifying", "id", cur.ID)
 				toBeFixed[cur.ID] = toSend[cur.ID]
 				continue
 			} else {
-				log.L.Errorf("Couldn't create/update document: %v. %v: %v.", cur.ID, cur.Error, cur.Reason)
+				slog.Error("Couldn't create/update document", "id", cur.ID, "error", cur.Error, "reason", cur.Reason)
 				continue
 			}
 		}
@@ -257,7 +252,7 @@ type CouchBulkDevicesResponse struct {
 
 func getUpdatedRevs(addr, database string, toBeFixed map[string]CouchStaticDevice, reingestionChannel chan<- CouchStaticDevice) {
 	if len(toBeFixed) < 1 {
-		log.L.Debugf("no updated revs to get. Returning")
+		slog.Debug("No updated revisions to get, returning")
 		return
 	}
 
@@ -273,14 +268,14 @@ func getUpdatedRevs(addr, database string, toBeFixed map[string]CouchStaticDevic
 		b,
 	)
 	if err != nil {
-		log.L.Debugf("Couldn't complete bulk request to update couch revision numbers: %v", err.Error())
+		slog.Debug("Couldn't complete bulk request to update couch revision numbers", "error", err.Error())
 		return
 	}
 
 	var rr CouchBulkDevicesResponse
 	er := json.Unmarshal(resp, &rr)
 	if er != nil {
-		log.L.Errorf("Unknown response recieved error: %v response: %s", er.Error(), resp)
+		slog.Error("Unknown response received", "error", er.Error(), "response", string(resp))
 		return
 	}
 
@@ -292,7 +287,7 @@ func getUpdatedRevs(addr, database string, toBeFixed map[string]CouchStaticDevic
 
 			reingestionChannel <- v
 		} else {
-			log.L.Errorf("Unknown key requested while getting updated revs: %v. %v:%v", rr.Results[i].ID, rr.Results[i].Docs[0].Error.Error, rr.Results[i].Docs[0].Error.Reason)
+			slog.Error("Unknown key requested while getting updated revisions", "id", rr.Results[i].ID, "error", rr.Results[i].Docs[0].Error.Error, "reason", rr.Results[i].Docs[0].Error.Reason)
 		}
 	}
 }

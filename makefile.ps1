@@ -3,7 +3,7 @@ $COMMAND = $args[0]
 $NAME = "event-forwarding-microservice"
 $OWNER = "byuoitav"
 $PKG = "github.com/$OWNER/$NAME"
-$DOCKER_URL = "docker.pkg.github.com"
+$DOCKER_URL = "ghcr.io"
 $DOCKER_PKG = "$DOCKER_URL/$OWNER/$NAME"
 
 Write-Output "PKG: $PKG"
@@ -65,16 +65,16 @@ function Build {
     # $location = Get-Location
     # Write-Output $location\deps
 
-    # if (Test-Path "cmd") {
-    #     Set-Location "cmd"
-    #     Write-Output "Entering \cmd"
+    if (Test-Path "cmd") {
+        Set-Location "cmd"
+        Write-Output "Entering \cmd"
     
         Write-Output "*****************************************"
         Write-Output "Building for linux-amd64"
         Set-Item -Path env:CGO_ENABLED -Value 0
         Set-Item -Path env:GOOS -Value "linux"
         Set-Item -Path env:GOARCH -Value "amd64"
-        Invoke-Expression "go build -v -o ./dist/${NAME}-amd64"
+        Invoke-Expression "go build -v -o ../dist/${NAME}-amd64"
 
 
         Write-Output "*****************************************"
@@ -82,14 +82,14 @@ function Build {
         Set-Item -Path env:CGO_ENABLED -Value 0
         Set-Item -Path env:GOOS -Value "linux"
         Set-Item -Path env:GOARCH -Value "arm"
-        Invoke-Expression "go build -v -o ./dist/${NAME}-arm"
+        Invoke-Expression "go build -v -o ../dist/${NAME}-arm"
 
         Write-Output "Build output is located in ./dist/."
         Set-Item -Path env:GOOS -Value "windows"
         Set-Item -Path env:GOARCH -Value "amd64"
 
-        # Invoke-Expression "cd .."
-    # }
+        Invoke-Expression "cd .."
+    }
 }
 
 function Cleanup {
@@ -203,7 +203,6 @@ elseif ($COMMAND -eq "Docker" ) {
     Deps
     Build
     DockerFunc
-    Cleanup
 }
 elseif ($COMMAND -eq "Deploy" ) {
     Cleanup
@@ -211,7 +210,6 @@ elseif ($COMMAND -eq "Deploy" ) {
     Build
     DockerFunc
     Deploy
-    Cleanup
 }
 else {
     Write-Output "Please include a valid command parameter"
