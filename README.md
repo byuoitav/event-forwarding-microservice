@@ -7,19 +7,67 @@ The event-forwarding-microservice receives events from the central event hub and
 
 ```
 {
-        "forwarders": [
-                {
-                        "name": "LogEvents",
-                        "type": "logging_system_name",
-                        "event-type": "all",
-                        "data-type": "event",
-                        "logging_system_name": {
-                                "update-interval": 5,
-                                "buffer-size": 4000
-                        }
-                }
-        ]
-} 
+    "caches": [
+        {
+            "name": "default",
+            "cache-type": "memory"
+        }
+    ],
+    "forwarders": [
+        {
+            "name": "ElkDeltaEvents",
+            "type": "elktimeseries",
+            "event-type": "delta",
+            "interval": 10,
+            "data-type": "event",
+            "cache-name": "default",
+            "elk": {
+                "url": "http://localhost:9200/",
+                "index-pattern": "av-delta-events",
+                "index-rotation-interval": "monthly"
+            }
+        },
+        {
+            "name": "ElkAllEvents",
+            "type": "elktimeseries",
+            "event-type": "all",
+            "interval": 10,
+            "data-type": "event",
+            "cache-name": "default",
+            "elk": {
+                "url": "http://localhost:9200/",
+                "index-pattern": "av-all-events",
+                "index-rotation-interval": "daily"
+            }
+        },
+{
+            "name": "ElkDeltaEvents",
+            "type": "elktimeseries",
+            "event-type": "delta",
+            "interval": 10,
+            "data-type": "event",
+            "cache-name": "default",
+            "elk": {
+                "url": "http://localhost:9200/",
+                "index-pattern": "av-delta-events",
+                "index-rotation-interval": "monthly"
+            }
+        },
+        {
+            "name": "ElkAllEvents",
+            "type": "elkstatic",
+            "event-type": "all",
+            "interval": 10,
+            "data-type": "device",
+            "cache-name": "default",
+            "elk": {
+                "url": "http://localhost:9200/",
+                "index-pattern": "oit-static-av-devices-v3",
+                "index-rotation-interval": "monthly"
+            }
+        }
+    ]
+}
 ```
 
 ## Endpoints
