@@ -418,6 +418,7 @@ var translationMap = map[string]string{
 	"TECLITE": "tec-lite",
 	"CUSTOM":  "custom",
 	"SD":      "tec-sd",
+	"TC":      "timeclock",
 }
 
 // GetDeviceTypeByID .
