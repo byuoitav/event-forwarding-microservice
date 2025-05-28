@@ -11,7 +11,6 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/event-forwarding-microservice/config"
 	"github.com/byuoitav/event-forwarding-microservice/events"
 	"github.com/byuoitav/event-forwarding-microservice/forwarding"
@@ -32,34 +31,34 @@ func init() {
 // PushAllDevices .
 func PushAllDevices(c Cache) {
 	//get all the records
-	log.L.Infof("Pushing updates for all devices to DELTA and ALL indexes")
+	slog.Info("Pushing updates for all devices to DELTA and ALL indexes")
 
 	devs, err := c.GetAllDeviceRecords()
 	if err != nil {
-		log.L.Errorf("Couldn't push all devices: %v", err)
+		slog.Error("Couldn't push all devices", "error", err)
 		return
 	}
-	list := forwarding.GetManagersForType(c.GetCacheName(), config.DEVICE, config.DELTA)
+	list := forwarding.GetManagersForType(config.DEVICE, config.DELTA)
 	for i := range list {
 		for j := range devs {
 			er := list[i].Send(devs[j])
 			if er != nil {
-				log.L.Warnf("Problem sending all update for devices %v. %v", devs[j].DeviceID, er.Error())
+				slog.Warn("Problem sending all update for devices", "deviceID", devs[j].DeviceID, "error", er)
 			}
 		}
 	}
 
-	list = forwarding.GetManagersForType(c.GetCacheName(), config.DEVICE, config.ALL)
+	list = forwarding.GetManagersForType(config.DEVICE, config.ALL)
 	for i := range list {
 		for j := range devs {
 			er := list[i].Send(devs[j])
 			if er != nil {
-				log.L.Warnf("Problem sending all update for devices %v. %v", devs[j].DeviceID, er.Error())
+				slog.Warn("Problem sending all update for devices", "deviceID", devs[j].DeviceID, "error", er)
 			}
 		}
 	}
 
-	log.L.Infof("Done sending update for all devices")
+	slog.Info("Done sending update for all devices")
 
 }
 
@@ -93,7 +92,7 @@ func ForwardAndStoreEvent(v events.Event, c Cache) (bool, error) {
 	}
 	//Forward All if they are not "fake" heartbeats
 	if v.Key != "auto-heartbeat" {
-		list := forwarding.GetManagersForType(c.GetCacheName(), config.EVENT, config.ALL)
+		list := forwarding.GetManagersForType(config.EVENT, config.ALL)
 		for i := range list {
 			//log.L.Debugf("Going to event forwarder: %v", list[i])
 			list[i].Send(v)
@@ -118,7 +117,7 @@ func ForwardAndStoreEvent(v events.Event, c Cache) (bool, error) {
 		return false, fmt.Errorf("Couldn't store and forward device event: %w", err)
 	}
 
-	list := forwarding.GetManagersForType(c.GetCacheName(), config.DEVICE, config.ALL)
+	list := forwarding.GetManagersForType(config.DEVICE, config.ALL)
 	for i := range list {
 		list[i].Send(newDev)
 	}
@@ -126,15 +125,15 @@ func ForwardAndStoreEvent(v events.Event, c Cache) (bool, error) {
 	//if there are changes and it's not a heartbeat/hardware event
 	if changes && !events.ContainsAnyTags(v, events.Heartbeat, events.HardwareInfo) {
 
-		log.L.Debugf("Event resulted in changes")
+		slog.Debug("Event resulted in changes")
 
 		//get the event stuff to forward
-		list = forwarding.GetManagersForType(c.GetCacheName(), config.EVENT, config.DELTA)
+		list = forwarding.GetManagersForType(config.EVENT, config.DELTA)
 		for i := range list {
 			list[i].Send(v)
 		}
 
-		list = forwarding.GetManagersForType(c.GetCacheName(), config.DEVICE, config.DELTA)
+		list = forwarding.GetManagersForType(config.DEVICE, config.DELTA)
 		for i := range list {
 			list[i].Send(newDev)
 		}
@@ -145,13 +144,13 @@ func ForwardAndStoreEvent(v events.Event, c Cache) (bool, error) {
 
 // ForwardRoom
 func ForwardRoom(room sd.StaticRoom, changes bool, c Cache) error {
-	list := forwarding.GetManagersForType(c.GetCacheName(), config.ROOM, config.ALL)
+	list := forwarding.GetManagersForType(config.ROOM, config.ALL)
 	for i := range list {
 		list[i].Send(room)
 	}
 
 	if changes {
-		list = forwarding.GetManagersForType(c.GetCacheName(), config.ROOM, config.DELTA)
+		list = forwarding.GetManagersForType(config.ROOM, config.DELTA)
 		for i := range list {
 			list[i].Send(room)
 		}
@@ -161,13 +160,13 @@ func ForwardRoom(room sd.StaticRoom, changes bool, c Cache) error {
 
 // ForwardDevice
 func ForwardDevice(device sd.StaticDevice, changes bool, c Cache) error {
-	list := forwarding.GetManagersForType(c.GetCacheName(), config.DEVICE, config.ALL)
+	list := forwarding.GetManagersForType(config.DEVICE, config.ALL)
 	for i := range list {
 		list[i].Send(device)
 	}
 
 	if changes {
-		list = forwarding.GetManagersForType(c.GetCacheName(), config.DEVICE, config.DELTA)
+		list = forwarding.GetManagersForType(config.DEVICE, config.DELTA)
 		for i := range list {
 			list[i].Send(device)
 		}

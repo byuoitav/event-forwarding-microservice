@@ -37,7 +37,7 @@ func PushAllDevices(c Cache) {
 		slog.Error("Couldn't push all devices", "error", err)
 		return
 	}
-	list := forwarding.GetManagersForType(c.GetCacheName(), config.DEVICE, config.DELTA)
+	list := forwarding.GetManagersForType(config.DEVICE, config.DELTA)
 	for i := range list {
 		for j := range devs {
 			er := list[i].Send(devs[j])
@@ -47,7 +47,7 @@ func PushAllDevices(c Cache) {
 		}
 	}
 
-	list = forwarding.GetManagersForType(c.GetCacheName(), config.DEVICE, config.ALL)
+	list = forwarding.GetManagersForType(config.DEVICE, config.ALL)
 	for i := range list {
 		for j := range devs {
 			er := list[i].Send(devs[j])
@@ -91,7 +91,7 @@ func ForwardAndStoreEvent(v events.Event, c Cache) (bool, error) {
 	}
 	//Forward All if they are not "fake" heartbeats
 	if v.Key != "auto-heartbeat" {
-		list := forwarding.GetManagersForType(c.GetCacheName(), config.EVENT, config.ALL)
+		list := forwarding.GetManagersForType(config.EVENT, config.ALL)
 		for i := range list {
 			list[i].Send(v)
 		}
@@ -115,7 +115,7 @@ func ForwardAndStoreEvent(v events.Event, c Cache) (bool, error) {
 		return false, fmt.Errorf("Couldn't store and forward device event: %w", err)
 	}
 
-	list := forwarding.GetManagersForType(c.GetCacheName(), config.DEVICE, config.ALL)
+	list := forwarding.GetManagersForType(config.DEVICE, config.ALL)
 	for i := range list {
 		list[i].Send(newDev)
 	}
@@ -126,12 +126,12 @@ func ForwardAndStoreEvent(v events.Event, c Cache) (bool, error) {
 		slog.Debug("Event resulted in changes")
 
 		//get the event stuff to forward
-		list = forwarding.GetManagersForType(c.GetCacheName(), config.EVENT, config.DELTA)
+		list = forwarding.GetManagersForType(config.EVENT, config.DELTA)
 		for i := range list {
 			list[i].Send(v)
 		}
 
-		list = forwarding.GetManagersForType(c.GetCacheName(), config.DEVICE, config.DELTA)
+		list = forwarding.GetManagersForType(config.DEVICE, config.DELTA)
 		for i := range list {
 			list[i].Send(newDev)
 		}
@@ -142,13 +142,13 @@ func ForwardAndStoreEvent(v events.Event, c Cache) (bool, error) {
 
 // ForwardRoom .
 func ForwardRoom(room sd.StaticRoom, changes bool, c Cache) error {
-	list := forwarding.GetManagersForType(c.GetCacheName(), config.ROOM, config.ALL)
+	list := forwarding.GetManagersForType(config.ROOM, config.ALL)
 	for i := range list {
 		list[i].Send(room)
 	}
 
 	if changes {
-		list = forwarding.GetManagersForType(c.GetCacheName(), config.ROOM, config.DELTA)
+		list = forwarding.GetManagersForType(config.ROOM, config.DELTA)
 		for i := range list {
 			list[i].Send(room)
 		}
@@ -158,13 +158,13 @@ func ForwardRoom(room sd.StaticRoom, changes bool, c Cache) error {
 
 // ForwardDevice .
 func ForwardDevice(device sd.StaticDevice, changes bool, c Cache) error {
-	list := forwarding.GetManagersForType(c.GetCacheName(), config.DEVICE, config.ALL)
+	list := forwarding.GetManagersForType(config.DEVICE, config.ALL)
 	for i := range list {
 		list[i].Send(device)
 	}
 
 	if changes {
-		list = forwarding.GetManagersForType(c.GetCacheName(), config.DEVICE, config.DELTA)
+		list = forwarding.GetManagersForType(config.DEVICE, config.DELTA)
 		for i := range list {
 			list[i].Send(device)
 		}
