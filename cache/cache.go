@@ -14,7 +14,7 @@ var cachesInit sync.Once
 // GetCache .
 func GetCache(cacheType string) shared.Cache {
 	cachesInit.Do(InitializeCaches)
-	slog.Info("Cache type", "type", cacheType)
+	slog.Debug("Cache type", "type", cacheType)
 	toReturn, ok := Caches[cacheType]
 	if !ok {
 		slog.Warn("Cache of type does not exist", "type", cacheType)

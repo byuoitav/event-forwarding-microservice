@@ -30,7 +30,7 @@ func init() {
 // PushAllDevices .
 func PushAllDevices(c Cache) {
 	//get all the records
-	slog.Info("Pushing updates for all devices to DELTA and ALL indexes")
+	slog.Debug("Pushing updates for all devices to DELTA and ALL indexes")
 
 	devs, err := c.GetAllDeviceRecords()
 	if err != nil {
@@ -187,7 +187,7 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 	v, ok := t.UpdateTimes[key]
 	if ok {
 		if v.After(updateTime) { //the current update is more recent
-			slog.Info("Discarding update as we have a more recent update", "key", key, "value", value, "deviceID", t.DeviceID)
+			slog.Debug("Discarding update as we have a more recent update", "key", key, "value", value, "deviceID", t.DeviceID)
 			return false, t, nil
 		}
 	}
