@@ -38,6 +38,7 @@ const (
 // Config .
 type Config struct {
 	Forwarders []Forwarder `json:"forwarders"`
+	Caches     []Cache     `json:"caches"`
 }
 
 var config Config

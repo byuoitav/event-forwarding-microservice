@@ -80,13 +80,13 @@ func initManagers() {
 }
 
 // GetManagersForType a
-func GetManagersForType(dataType, eventType string) []BufferManager {
+func GetManagersForType(cacheName, dataType, eventType string) []BufferManager {
 	managerInit.Do(initManagers)
 
 	slog.Debug("Getting managers", "dataType", dataType, "eventType", eventType)
-	v, ok := managerMap[fmt.Sprintf("%s-%s", dataType, eventType)]
+	v, ok := managerMap[fmt.Sprintf("%s-%s-%s", cacheName, dataType, eventType)]
 	if !ok {
-		slog.Debug("Unknown manager type", "type", fmt.Sprintf("%s-%s", dataType, eventType))
+		slog.Debug("Unknown manager type", "type", fmt.Sprintf("%s-%s-%s", cacheName, dataType, eventType))
 		return []BufferManager{}
 	}
 	return v
