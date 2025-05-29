@@ -5,14 +5,15 @@ import (
 	"log/slog"
 	"sync"
 
+	"github.com/byuoitav/event-forwarding-microservice/cache"
 	"github.com/byuoitav/event-forwarding-microservice/events"
-	"github.com/byuoitav/event-forwarding-microservice/shared"
 )
 
 // A ForwardManager manages events to efficiently forward them
 type ForwardManager struct {
 	Workers     int
 	EventStream chan events.Event
+	EventCache  string
 
 	wg  *sync.WaitGroup
 	ctx context.Context // the context passed in when Start() was called
@@ -29,6 +30,7 @@ func GetForwardManager() *ForwardManager {
 		fm = &ForwardManager{
 			Workers:     10,
 			EventStream: make(chan events.Event, 10000),
+			EventCache:  "default",
 		}
 	})
 
@@ -54,6 +56,7 @@ func (f *ForwardManager) Start(ctx context.Context) error {
 
 		go func(index int) {
 			defer f.wg.Done()
+			slog.Info("Started forward manager worker", "worker", index)
 			defer slog.Info("Closed forward manager worker", "worker", index)
 
 			for {
@@ -62,17 +65,21 @@ func (f *ForwardManager) Start(ctx context.Context) error {
 					return
 				case event, ok := <-f.EventStream:
 					if !ok {
-						slog.Warn("Forward manager event stream closed")
+						slog.Warn("forward manager event stream closed")
 						return
 					}
-					shared.ForwardAndStoreEvent(event)
+
+					if len(f.EventCache) > 0 {
+						//get the cache and submit for persistence
+						cache.GetCache(f.EventCache).StoreAndForwardEvent(event)
+					}
 				}
 			}
 		}(i)
 	}
 
 	f.wg.Wait()
-	slog.Info("Forward manager stopped.")
+	slog.Info("forward manager stopped.")
 
 	return nil
 }

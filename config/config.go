@@ -38,6 +38,7 @@ const (
 // Config .
 type Config struct {
 	Forwarders []Forwarder `json:"forwarders"`
+	Caches     []Cache     `json:"caches"`
 }
 
 var config Config
@@ -55,10 +56,10 @@ func getConfigFile() {
 	awsAccessKey := os.Getenv("AWS_ACCESS_KEY")
 	awsSecretKey := os.Getenv("AWS_SECRET_KEY")
 	if len(awsAccessKey) == 0 {
-		slog.Info("ERROR: AWS_ACCESS_KEY not set")
+		slog.Error("ERROR: AWS_ACCESS_KEY not set")
 	}
 	if len(awsSecretKey) == 0 {
-		slog.Info("ERROR: AWS_SECRET_KEY not set")
+		slog.Error("ERROR: AWS_SECRET_KEY not set")
 	}
 	awsRegion := "us-west-2"
 
@@ -70,7 +71,7 @@ func getConfigFile() {
 
 	sess, err := session.NewSession(awsConfig)
 	if err != nil {
-		slog.Info("Error creating AWS session:", "error", err)
+		slog.Error("Error creating AWS session:", "error", err)
 		return
 	}
 
@@ -79,7 +80,7 @@ func getConfigFile() {
 
 	bucketName := os.Getenv("AWS_BUCKET_NAME") // "av-microservices-configs" in the dev environment
 	if len(bucketName) == 0 {
-		slog.Info("ERROR: AWS_BUCKET_NAME not set")
+		slog.Error("ERROR: AWS_BUCKET_NAME not set")
 	}
 	objectPath := "service-config.json"
 
@@ -90,7 +91,7 @@ func getConfigFile() {
 
 	resp, err := svc.GetObject(params)
 	if err != nil {
-		slog.Info("Error getting object from bucket:", "objectPath", objectPath, "bucketName", bucketName, "error", err)
+		slog.Error("Error getting object from bucket:", "objectPath", objectPath, "bucketName", bucketName, "error", err)
 		return
 	}
 	defer resp.Body.Close()
@@ -98,14 +99,14 @@ func getConfigFile() {
 	// Read config file
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		slog.Info("Error reading object from bucket:", "objectPath", objectPath, "bucketName", bucketName, "error", err)
+		slog.Error("Error reading object from bucket:", "objectPath", objectPath, "bucketName", bucketName, "error", err)
 		return
 	}
 
 	// Unmarshal config file
 	err = json.Unmarshal(b, &config)
 	if err != nil {
-		slog.Info("Error unmarshalling object from bucket:", "objectPath", objectPath, "bucketName", bucketName, "error", err)
+		slog.Error("Error unmarshalling object from bucket:", "objectPath", objectPath, "bucketName", bucketName, "error", err)
 		return
 	}
 

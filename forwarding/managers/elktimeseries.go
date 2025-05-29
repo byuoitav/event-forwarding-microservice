@@ -2,8 +2,9 @@ package managers
 
 import (
 	"errors"
-	"log/slog"
 	"time"
+
+	"log/slog"
 
 	"github.com/byuoitav/event-forwarding-microservice/elk"
 	"github.com/byuoitav/event-forwarding-microservice/events"
@@ -35,7 +36,6 @@ func GetDefaultElkTimeSeries(URL string, index func() string, interval time.Dura
 
 // Send .
 func (e *ElkTimeseriesForwarder) Send(toSend interface{}) error {
-
 	var event events.Event
 
 	switch e := toSend.(type) {
@@ -44,7 +44,7 @@ func (e *ElkTimeseriesForwarder) Send(toSend interface{}) error {
 	case events.Event:
 		event = e
 	default:
-		return errors.New("invalid type to send via an Elk Event Forwarder, must be an event from the byuoitav/event-forwarding-microservice/events package")
+		return errors.New("Invalid type to send via an Elk Event Forwarder, must be an event from the events package.")
 	}
 
 	e.incomingChannel <- event
@@ -54,7 +54,6 @@ func (e *ElkTimeseriesForwarder) Send(toSend interface{}) error {
 
 // starts the manager and buffer.
 func (e *ElkTimeseriesForwarder) start() {
-
 	slog.Info("Starting event forwarder", "index", e.index())
 	ticker := time.NewTicker(e.interval)
 

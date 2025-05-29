@@ -57,9 +57,8 @@ type CouchDeviceBuffer struct {
 	couchaddr string
 }
 
-// Send fulfills the manager interface
+// Send fulfils the manager interface
 func (c *CouchDeviceBuffer) Send(toSend interface{}) error {
-
 	dev, ok := toSend.(sd.StaticDevice)
 	if !ok {
 		return errors.New("invalid type, couch device buffer expects a StaticDevice")
@@ -71,7 +70,6 @@ func (c *CouchDeviceBuffer) Send(toSend interface{}) error {
 }
 
 func (c *CouchDeviceBuffer) start() {
-
 	slog.Info("Starting couch buffer for database", "database", c.database)
 	ticker := time.NewTicker(c.interval)
 
@@ -174,7 +172,7 @@ type CouchBulkUpdateResponse struct {
 func sendBulkDeviceUpdate(toSend map[string]CouchStaticDevice, returnChan chan<- []Rev, reingestionChannel chan<- CouchStaticDevice, addr, database string) {
 
 	if len(toSend) < 1 {
-		slog.Info("No devices to send, returning", "addr", addr, "database", database)
+		slog.Info("No devices to send, returning...", "addr", addr, "database", database)
 		return
 	}
 	slog.Info("Sending bulk update", "addr", addr, "database", database)
@@ -214,7 +212,6 @@ func sendBulkDeviceUpdate(toSend map[string]CouchStaticDevice, returnChan chan<-
 			toReturn = append(toReturn, Rev{ID: cur.ID, Revision: cur.Revision})
 		} else {
 			if cur.Error == "conflict" {
-				//we need to get the new revision, then dump it back up the reingestion channel
 				slog.Warn("Document update conflict, rectifying", "id", cur.ID)
 				toBeFixed[cur.ID] = toSend[cur.ID]
 				continue
@@ -252,7 +249,7 @@ type CouchBulkDevicesResponse struct {
 
 func getUpdatedRevs(addr, database string, toBeFixed map[string]CouchStaticDevice, reingestionChannel chan<- CouchStaticDevice) {
 	if len(toBeFixed) < 1 {
-		slog.Debug("No updated revisions to get, returning")
+		slog.Debug("No updated revs to get. Returning")
 		return
 	}
 
@@ -275,7 +272,7 @@ func getUpdatedRevs(addr, database string, toBeFixed map[string]CouchStaticDevic
 	var rr CouchBulkDevicesResponse
 	er := json.Unmarshal(resp, &rr)
 	if er != nil {
-		slog.Error("Unknown response received", "error", er.Error(), "response", string(resp))
+		slog.Error("Unknown response received error", "error", er.Error(), "response", string(resp))
 		return
 	}
 
@@ -287,7 +284,7 @@ func getUpdatedRevs(addr, database string, toBeFixed map[string]CouchStaticDevic
 
 			reingestionChannel <- v
 		} else {
-			slog.Error("Unknown key requested while getting updated revisions", "id", rr.Results[i].ID, "error", rr.Results[i].Docs[0].Error.Error, "reason", rr.Results[i].Docs[0].Error.Reason)
+			slog.Error("Unknown key requested while getting updated revs", "id", rr.Results[i].ID, "error", rr.Results[i].Docs[0].Error.Error, "reason", rr.Results[i].Docs[0].Error.Reason)
 		}
 	}
 }

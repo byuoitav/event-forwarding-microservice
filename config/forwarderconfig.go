@@ -13,6 +13,11 @@ const (
 	ROOM   = "room"
 	EVENT  = "event"
 
+	//Cache Types
+
+	LEGACY  = "legacy"
+	DEFAULT = "default"
+
 	//Forwarder Types
 
 	ELKSTATIC     = "elkstatic"
@@ -48,6 +53,10 @@ type Forwarder struct {
 	//Supported Values:
 	//device, event
 	DataType string `json:"data-type"`
+
+	//Supported Values;
+	//legacy, default
+	CacheName string `json:"cache-name"`
 
 	Couch CouchForwarder `json:"couch"`
 	Elk   ElkForwarder   `json:"elk"`

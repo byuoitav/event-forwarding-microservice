@@ -1,4 +1,3 @@
-// forwarding sets up the individual forwarders for each specified forwarder in the config
 package forwarding
 
 import (
@@ -16,7 +15,7 @@ type BufferManager interface {
 	Send(toSend interface{}) error
 }
 
-// Key is made up of the DataType-EventType
+// Key is made up of the CacheName-DataType-EventType
 // e.g. default-device-all or legacy-event-all
 var managerMap map[string][]BufferManager
 var managerInit sync.Once
@@ -66,16 +65,10 @@ func initManagers() {
 		case config.WEBSOCKET:
 			slog.Info("Initializing Websocket manager", "name", curName)
 			managerMap[curName] = append(managerMap[curName], managers.GetDefaultWebsocketForwarder())
-
-		case config.HUMIO:
-			slog.Info("Initializing Humio manager", "name", curName)
-			managerMap[curName] = append(managerMap[curName], managers.GetDefaultHumioForwarder(
-				time.Duration(i.Humio.Interval)*time.Second,
-				i.Humio.BufferSize,
-				i.Humio.IngestToken,
-			))
 		}
+
 	}
+
 	slog.Info("Buffer managers initialized")
 }
 
@@ -119,7 +112,7 @@ func GetIndexFunction(indexPattern, rotationInterval string) func() string {
 
 		}
 	default:
-		slog.Error("Unknown interval for index", "interval", rotationInterval, "index", indexPattern)
+		slog.Error("Unknown interval for index", "interval", rotationInterval, "indexPattern", indexPattern)
 	}
 	return func() string {
 		return indexPattern

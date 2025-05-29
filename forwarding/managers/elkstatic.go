@@ -54,7 +54,6 @@ func GetDefaultElkStaticDeviceForwarder(URL string, index func() string, interva
 
 // Send takes a device and adds it to the buffer
 func (e *ElkStaticDeviceForwarder) Send(toSend interface{}) error {
-
 	var event sd.StaticDevice
 
 	switch ev := toSend.(type) {
@@ -63,7 +62,7 @@ func (e *ElkStaticDeviceForwarder) Send(toSend interface{}) error {
 	case sd.StaticDevice:
 		event = ev
 	default:
-		return errors.New("invalid type to send via an Elk device Forwarder, must be a static device as defined in byuoitav/state-parser/state/statedefinition")
+		return errors.New("Invalid type to send via an Elk device Forwarder, must be a static device as defined in state/statedefinition")
 	}
 
 	e.incomingChannel <- event
@@ -73,7 +72,6 @@ func (e *ElkStaticDeviceForwarder) Send(toSend interface{}) error {
 
 // Send takes a room and adds it to the buffer
 func (e *ElkStaticRoomForwarder) Send(toSend interface{}) error {
-
 	var event sd.StaticRoom
 
 	switch e := toSend.(type) {
@@ -82,7 +80,7 @@ func (e *ElkStaticRoomForwarder) Send(toSend interface{}) error {
 	case sd.StaticRoom:
 		event = e
 	default:
-		return errors.New("invalid type to send via an Elk device Forwarder, must be a static device as defined in byuoitav/state-parser/state/statedefinition")
+		return errors.New("Invalid type to send via an Elk room Forwarder, must be a static room as defined in state/statedefinition")
 	}
 
 	e.incomingChannel <- event
